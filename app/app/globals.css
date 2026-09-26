@@ -140,7 +140,7 @@ button { cursor: pointer; }
   .brand span { font-size: 23px; }.brand small { font-size: 9px; }
   .main-nav { display: none; position: absolute; top: 68px; left: 0; right: 0; background: #10151e; padding: 15px 20px 22px; box-shadow: 0 10px 20px #0003; }
   .main-nav.open { display: flex; flex-direction: column; align-items: stretch; gap: 2px; }.main-nav button { text-align: left; padding: 13px 8px; }.main-nav button.active:after { bottom: 5px; right: auto; width: 40px; }
-  .header-actions { gap: 5px; }.post-button { font-size: 0; gap: 0; padding: 11px; }.post-button svg { width: 19px; }.menu-button { display: block; padding: 7px; }
+  .header-actions { gap: 5px; }.header-heart { display: none; }.post-button { font-size: 0; gap: 5px; padding: 10px 9px; }.post-button::after { content: "Обява"; font-size: 12px; }.post-button svg { width: 19px; }.menu-button { display: block; padding: 7px; }
   .hero { height: 380px; background-position: 65% center; }.hero-overlay { background: linear-gradient(90deg, #080c16eb 0%, #080c16b8 54%, #080c1640); }
   .hero-content { padding-top: 44px; }.hero h1 { font-size: 38px; }.hero p { font-size: 14px; max-width: 310px; }.eyebrow { font-size: 9px; }.hero-points { flex-wrap: wrap; gap: 10px 17px; margin-top: 24px; font-size: 10px; }.hero-points svg { width: 19px; }
   .home-search { margin-top: -45px; }.search-panel { padding: 16px; }.search-fields { grid-template-columns: 1fr 1fr; gap: 11px; }.search-button { grid-column: span 2; }.search-fields select, .search-fields input { height: 44px; }
