@@ -57,12 +57,12 @@ create policy "Sellers can remove their drafts or submissions"
 -- User-editable metadata must never be accepted as an admin role.
 create policy "Admins can read every listing"
   on public.car_listings for select to authenticated
-  using ((select auth.jwt() -> 'app_metadata' ->> 'role') = 'admin');
+  using (((select auth.jwt()) -> 'app_metadata' ->> 'role') = 'admin');
 
 create policy "Admins can moderate listings"
   on public.car_listings for update to authenticated
-  using ((select auth.jwt() -> 'app_metadata' ->> 'role') = 'admin')
-  with check ((select auth.jwt() -> 'app_metadata' ->> 'role') = 'admin');
+  using (((select auth.jwt()) -> 'app_metadata' ->> 'role') = 'admin')
+  with check (((select auth.jwt()) -> 'app_metadata' ->> 'role') = 'admin');
 
 -- Private bucket: only owners can read drafts; public can obtain images of active listings.
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
@@ -108,7 +108,7 @@ create policy "Admins read submitted listing photos"
   on storage.objects for select to authenticated
   using (
     bucket_id = 'car-photos'
-    and (select auth.jwt() -> 'app_metadata' ->> 'role') = 'admin'
+    and ((select auth.jwt()) -> 'app_metadata' ->> 'role') = 'admin'
     and exists (
       select 1 from public.car_listings l
       where l.id::text = (storage.foldername(name))[2]
