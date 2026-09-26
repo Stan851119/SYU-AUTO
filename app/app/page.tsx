@@ -24,7 +24,7 @@ type Car = {
   details?: string;
 };
 
-type View = "home" | "results" | "detail" | "favorites" | "post" | "valuation";
+type View = "home" | "results" | "detail" | "favorites" | "post" | "valuation" | "compare";
 type Filters = { make: string; model: string; min: string; max: string; fuel: string; city: string; body: string; year: string; gearbox: string };
 
 const initialFilters: Filters = { make: "", model: "", min: "", max: "", fuel: "", city: "", body: "", year: "", gearbox: "" };
@@ -70,6 +70,7 @@ export default function Home() {
   const [advanced, setAdvanced] = useState(false);
   const [selectedId, setSelectedId] = useState<number | string>(1);
   const [favorites, setFavorites] = useState<(number | string)[]>([]);
+  const [compareIds, setCompareIds] = useState<(number | string)[]>([]);
   const [drafts, setDrafts] = useState<Car[]>([]);
   const [liveCars, setLiveCars] = useState<Car[]>([]);
   const [myListings, setMyListings] = useState<ListingRow[]>([]);
@@ -97,6 +98,8 @@ export default function Home() {
     try {
       setFavorites(JSON.parse(localStorage.getItem("syu-favorites") || "[]"));
       setDrafts(JSON.parse(localStorage.getItem("syu-drafts") || "[]"));
+      const savedCompare = JSON.parse(localStorage.getItem("syu-compare") || "[]");
+      if (Array.isArray(savedCompare)) setCompareIds(savedCompare.filter((id) => typeof id === "string" || typeof id === "number").slice(0, 3));
     } catch { /* Ignore outdated local data. */ }
   }, []);
 
@@ -139,6 +142,7 @@ export default function Home() {
   const selected = cars.find((car) => car.id === selectedId) || cars[0];
   const shownCars = view === "favorites" ? cars.filter((car) => favorites.includes(car.id)) : matches;
   const makes = [...new Set(cars.map((car) => car.make))].sort();
+  const comparedCars = compareIds.map((id) => cars.find((car) => car.id === id)).filter((car): car is Car => !!car);
 
   function navigate(next: View) {
     setView(next);
@@ -163,6 +167,23 @@ export default function Home() {
       localStorage.setItem("syu-favorites", JSON.stringify(next));
       return next;
     });
+  }
+  function toggleCompare(id: number | string) {
+    if (!compareIds.includes(id) && comparedCars.length >= 3) {
+      setNotice("Можеш да сравниш до 3 автомобила. Махни един от избраните, за да добавиш друг.");
+      return;
+    }
+    setCompareIds((old) => {
+      if (old.includes(id)) {
+        const next = old.filter((item) => item !== id);
+        localStorage.setItem("syu-compare", JSON.stringify(next));
+        return next;
+      }
+      const next = [...old.filter((item) => cars.some((car) => car.id === item)), id];
+      localStorage.setItem("syu-compare", JSON.stringify(next));
+      return next;
+    });
+    setNotice("");
   }
   function openCar(id: number | string) { setSelectedId(id); navigate("detail"); }
   async function sendSignIn(event: FormEvent) {
@@ -314,6 +335,7 @@ export default function Home() {
         <b className="price">{euro(car.price)}</b>
         <span className="car-location"><Icon name="pin" size={14} />{car.city}</span>
       </button>
+      <button className={`compare-card-button ${compareIds.includes(car.id) ? "selected" : ""}`} onClick={() => toggleCompare(car.id)} aria-pressed={compareIds.includes(car.id)}>{compareIds.includes(car.id) ? "✓ Добавена за сравнение" : "+ Сравни"}</button>
     </article>;
   }
 
@@ -327,6 +349,7 @@ export default function Home() {
           <button onClick={() => { navigate("home"); setTimeout(() => document.getElementById("search")?.scrollIntoView({ behavior: "smooth" }), 50); }}>Търсене</button>
           <button className={view === "valuation" ? "active" : ""} onClick={() => navigate("valuation")}>Оцени кола</button>
           <button className={view === "favorites" ? "active" : ""} onClick={() => navigate("favorites")}>Любими {favorites.length > 0 && <span className="nav-count">{favorites.length}</span>}</button>
+          <button className={view === "compare" ? "active" : ""} onClick={() => navigate("compare")}>Сравни {comparedCars.length > 0 && <span className="nav-count">{comparedCars.length}</span>}</button>
         </nav>
         <div className="header-actions">
           <button className="header-heart" onClick={() => navigate("favorites")} aria-label="Любими"><Icon name="heart" size={22} />{favorites.length > 0 && <span className="heart-count">{favorites.length}</span>}</button>
@@ -354,13 +377,20 @@ export default function Home() {
       </main>
     </>}
 
+    {view === "compare" && <main className="page-width interior compare-page"><div className="interior-heading"><span className="section-kicker">SYU AUTO · СРАВНЕНИЕ</span><h1>Сравни автомобили</h1><p>Избери до 3 автомобила от обявите. Данните са от публикуваното от продавачите; примерните обяви са демонстрационни.</p></div>
+      {comparedCars.length ? <div className="compare-scroll" role="region" aria-label="Сравнение на автомобили" tabIndex={0}><table className="compare-table"><thead><tr><th scope="col">Характеристика</th>{comparedCars.map((car) => <th scope="col" key={car.id}><CarPhoto photo={car.photo} imageUrl={car.imageUrl} /><strong>{car.title}</strong><button onClick={() => toggleCompare(car.id)} aria-label={`Премахни ${car.title} от сравнение`}>Премахни</button></th>)}</tr></thead><tbody>
+        {([ ["Цена", (car: Car) => euro(car.price)], ["Година", (car: Car) => String(car.year)], ["Пробег", (car: Car) => `${number(car.mileage)} км`], ["Гориво", (car: Car) => car.fuel], ["Скоростна кутия", (car: Car) => car.gearbox], ["Купе", (car: Car) => car.body], ["Град", (car: Car) => car.city] ] as [string, (car: Car) => string][]).map(([label, value]) => <tr key={label}><th scope="row">{label}</th>{comparedCars.map((car) => <td key={car.id}>{value(car)}</td>)}</tr>)}
+        <tr><th scope="row">Обява</th>{comparedCars.map((car) => <td key={car.id}><button className="text-link" onClick={() => openCar(car.id)}>Виж детайли <Icon name="arrow" size={15} /></button></td>)}</tr>
+      </tbody></table></div> : <div className="empty-state"><Icon name="car" size={38} /><h2>Още няма избрани автомобили</h2><p>Избери „Сравни“ под обявите, които те интересуват.</p><button className="primary-button" onClick={() => { setFilters(initialFilters); navigate("results"); }}>Разгледай обявите</button></div>}
+    </main>}
+
     {(view === "results" || view === "favorites") && <main className="page-width interior"><div className="interior-heading"><div><span className="section-kicker">SYU AUTO · {marketplace ? "ОБЯВИ" : "ДЕМО КАТАЛОГ"}</span><h1>{view === "favorites" ? "Любими автомобили" : "Автомобили"}</h1><p>{view === "favorites" ? `${shownCars.length} ${shownCars.length === 1 ? "запазена обява" : "запазени обяви"} в този браузър` : `${shownCars.length} ${shownCars.length === 1 ? "резултат" : "резултата"} ${marketplace ? "в каталога" : "от примерните обяви и твоите чернови"}`}</p></div></div>
       {view === "results" && <div className="results-search">{SearchForm()}</div>}
       <div className="results-toolbar"><span>{shownCars.length} {shownCars.length === 1 ? "обява" : "обяви"}</span>{view === "results" && <label>Подреди по <select value={sort} onChange={(e) => setSort(e.target.value)}><option value="newest">Най-нови</option><option value="priceAsc">Цена: ниска към висока</option><option value="priceDesc">Цена: висока към ниска</option></select></label>}</div>
       {shownCars.length ? <div className="cards-grid results-grid">{shownCars.map((car) => <CarCard car={car} key={car.id} />)}</div> : <div className="empty-state"><Icon name={view === "favorites" ? "heart" : "search"} size={38} /><h2>{view === "favorites" ? "Още нямаш любими обяви" : "Няма съвпадения"}</h2><p>{view === "favorites" ? "Натисни сърцето на автомобил, който ти харесва." : "Промени някой от филтрите, за да видиш повече автомобили."}</p><button className="primary-button" onClick={() => { setFilters(initialFilters); navigate("results"); }}>Разгледай обявите</button></div>}
     </main>}
 
-    {view === "detail" && selected && <main className="page-width interior detail-page"><button className="back-link" onClick={() => navigate("results")}>← Обратно към обявите</button>{notice && <div className="notice">{notice}</div>}<div className="detail-layout"><div><CarPhoto photo={selected.photo} imageUrl={selected.imageUrl} className="detail-photo" /><p className="photo-note">{selected.draft ? "Черновата използва илюстративна снимка." : marketplace ? selected.imageUrl ? "Снимка, качена от продавача." : "Все още няма добавена снимка." : "Демонстрационна обява · снимката е илюстративна."}</p></div><div className="detail-panel"><span className="section-kicker">{selected.draft ? "ЛОКАЛНА ЧЕРНОВА" : marketplace ? "ОБЯВА" : "ПРИМЕРНА ОБЯВА"}</span><h1>{selected.title}</h1><p className="detail-price">{euro(selected.price)}</p><p className="detail-city"><Icon name="pin" size={17} />{selected.city}</p><div className="spec-grid"><span>Година<strong>{selected.year}</strong></span><span>Пробег<strong>{number(selected.mileage)} км</strong></span><span>Гориво<strong>{selected.fuel}</strong></span><span>Скоростна кутия<strong>{selected.gearbox}</strong></span><span>Купе<strong>{selected.body}</strong></span></div><button className="primary-button wide" onClick={() => toggleFavorite(selected.id)}><Icon name="heart" size={19} fill={favorites.includes(selected.id) ? "currentColor" : "none"} />{favorites.includes(selected.id) ? "Запазено в любими" : "Запази в любими"}</button>{selected.details && <p className="detail-description">{selected.details}</p>}<div className="detail-hint">Съобщенията до продавача ще бъдат добавени в следващ етап.</div></div></div></main>}
+    {view === "detail" && selected && <main className="page-width interior detail-page"><button className="back-link" onClick={() => navigate("results")}>← Обратно към обявите</button>{notice && <div className="notice">{notice}</div>}<div className="detail-layout"><div><CarPhoto photo={selected.photo} imageUrl={selected.imageUrl} className="detail-photo" /><p className="photo-note">{selected.draft ? "Черновата използва илюстративна снимка." : marketplace ? selected.imageUrl ? "Снимка, качена от продавача." : "Все още няма добавена снимка." : "Демонстрационна обява · снимката е илюстративна."}</p></div><div className="detail-panel"><span className="section-kicker">{selected.draft ? "ЛОКАЛНА ЧЕРНОВА" : marketplace ? "ОБЯВА" : "ПРИМЕРНА ОБЯВА"}</span><h1>{selected.title}</h1><p className="detail-price">{euro(selected.price)}</p><p className="detail-city"><Icon name="pin" size={17} />{selected.city}</p><div className="spec-grid"><span>Година<strong>{selected.year}</strong></span><span>Пробег<strong>{number(selected.mileage)} км</strong></span><span>Гориво<strong>{selected.fuel}</strong></span><span>Скоростна кутия<strong>{selected.gearbox}</strong></span><span>Купе<strong>{selected.body}</strong></span></div><button className="primary-button wide" onClick={() => toggleFavorite(selected.id)}><Icon name="heart" size={19} fill={favorites.includes(selected.id) ? "currentColor" : "none"} />{favorites.includes(selected.id) ? "Запазено в любими" : "Запази в любими"}</button><button className="compare-detail-button" onClick={() => toggleCompare(selected.id)} aria-pressed={compareIds.includes(selected.id)}>{compareIds.includes(selected.id) ? "✓ Добавена за сравнение" : "+ Добави за сравнение"}</button>{selected.details && <p className="detail-description">{selected.details}</p>}<div className="detail-hint">Съобщенията до продавача ще бъдат добавени в следващ етап.</div></div></div></main>}
 
     {view === "valuation" && <main className="page-width interior valuation-page"><div className="interior-heading"><span className="section-kicker">SYU AUTO · ОРИЕНТИР</span><h1>Оцени своя автомобил</h1><p>Сравняваме обявени цени за същия модел и правим приблизителна корекция за година, пробег и външен вид.</p></div>
       <div className="valuation-layout"><form className="post-form valuation-form" onSubmit={valueCar}><div className="form-grid">
@@ -390,6 +420,7 @@ export default function Home() {
     </main>}
 
     <footer className="site-footer"><div className="page-width footer-inner"><div><strong><em>SYU</em> AUTO</strong><p>Автомобили в България — проект в разработка.</p></div><div><button onClick={() => navigate("home")}>Начало</button><button onClick={() => { setFilters(initialFilters); navigate("results"); }}>Обяви</button><button onClick={() => navigate("valuation")}>Оцени кола</button><button onClick={() => navigate("post")}>Подготви обява</button></div><small>© 2026 SYU AUTO · Демонстрационна версия</small></div></footer>
+    {comparedCars.length > 0 && view !== "compare" && <div className="compare-bar" role="status"><div><strong>{comparedCars.length} / 3 автомобила</strong><span>{comparedCars.length < 2 ? "Добави още един за сравнение" : comparedCars.map((car) => car.make + " " + car.model).join(" · ")}</span></div><button onClick={() => navigate("compare")} disabled={comparedCars.length < 2}>Сравни сега <Icon name="arrow" size={16} /></button>{notice && <p>{notice}</p>}</div>}
     <button className="assistant-launch" onClick={() => setAssistantOpen((old) => !old)} aria-label={assistantOpen ? "Затвори асистента" : "Отвори асистента"}><Icon name={assistantOpen ? "close" : "spark"} size={23} /><span>{assistantOpen ? "Затвори" : "Попитай SYU"}</span></button>
     {assistantOpen && <section className="assistant-panel" aria-label="SYU асистент"><div className="assistant-head"><div><strong>SYU помощник</strong><small>{marketplace && user ? "ИИ при свързана услуга · демо при липса на връзка" : "Демо насоки за обявите"}</small></div><button onClick={() => setAssistantOpen(false)} aria-label="Затвори"><Icon name="close" size={18} /></button></div><div className="assistant-messages" role="log" aria-live="polite">{chat.map((entry, index) => <div key={index} className={`assistant-message ${entry.role === "user" ? "from-user" : ""}`}>{entry.content}{entry.demo && <small>Демо отговор</small>}</div>)}{assistantBusy && <p>Подготвям отговор…</p>}</div><form className="assistant-input" onSubmit={askAssistant}><input aria-label="Въпрос към асистента" maxLength={500} value={assistantInput} onChange={(event) => setAssistantInput(event.target.value)} placeholder="Напр. Toyota до 22 000 €" /><button type="submit" disabled={assistantBusy || !assistantInput.trim()} aria-label="Изпрати въпроса"><Icon name="arrow" size={20} /></button></form></section>}
   </div>;
