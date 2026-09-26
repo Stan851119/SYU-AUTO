@@ -43,10 +43,10 @@ create policy "Sellers can create drafts or submissions"
   on public.car_listings for insert to authenticated
   with check (seller_id = (select auth.uid()) and status in ('draft', 'pending'));
 
--- Sellers cannot publish an active listing themselves or change an active ad.
-create policy "Sellers can edit their drafts or submissions"
+-- Sellers submit drafts for review; submitted and active listings cannot be changed.
+create policy "Sellers can submit their drafts"
   on public.car_listings for update to authenticated
-  using (seller_id = (select auth.uid()) and status in ('draft', 'pending'))
+  using (seller_id = (select auth.uid()) and status = 'draft')
   with check (seller_id = (select auth.uid()) and status in ('draft', 'pending'));
 
 create policy "Sellers can remove their drafts or submissions"
@@ -98,6 +98,21 @@ create policy "Visitors read active listing photos"
       select 1 from public.car_listings l
       where l.id::text = (storage.foldername(name))[2]
         and l.status = 'active'
+        and l.seller_id::text = (storage.foldername(name))[1]
+        and name = any(l.photo_paths)
+    )
+  );
+
+-- Moderators need access to private photos before approving an ad.
+create policy "Admins read submitted listing photos"
+  on storage.objects for select to authenticated
+  using (
+    bucket_id = 'car-photos'
+    and (select auth.jwt() -> 'app_metadata' ->> 'role') = 'admin'
+    and exists (
+      select 1 from public.car_listings l
+      where l.id::text = (storage.foldername(name))[2]
+        and l.status = 'pending'
         and l.seller_id::text = (storage.foldername(name))[1]
         and name = any(l.photo_paths)
     )

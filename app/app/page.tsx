@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import type { User } from "@supabase/supabase-js";
-import { loadActiveListings, marketplace } from "../lib/marketplace";
+import { loadActiveListings, loadMyListings, loadPendingListings, marketplace, type ListingRow } from "../lib/marketplace";
 
 type Car = {
   id: number | string;
@@ -69,6 +69,8 @@ export default function Home() {
   const [favorites, setFavorites] = useState<(number | string)[]>([]);
   const [drafts, setDrafts] = useState<Car[]>([]);
   const [liveCars, setLiveCars] = useState<Car[]>([]);
+  const [myListings, setMyListings] = useState<ListingRow[]>([]);
+  const [pendingListings, setPendingListings] = useState<ListingRow[]>([]);
   const [user, setUser] = useState<User | null>(null);
   const [email, setEmail] = useState("");
   const [photos, setPhotos] = useState<File[]>([]);
@@ -77,7 +79,7 @@ export default function Home() {
   const [sort, setSort] = useState("newest");
   const [mobileMenu, setMobileMenu] = useState(false);
   const [notice, setNotice] = useState("");
-  const [draftForm, setDraftForm] = useState({ make: "", model: "", year: "", mileage: "", price: "", fuel: "Бензин", gearbox: "Ръчна", city: "", body: "Седан" });
+  const [draftForm, setDraftForm] = useState({ make: "", model: "", year: "", mileage: "", price: "", fuel: "Бензин", gearbox: "Ръчна", city: "", body: "Седан", details: "" });
 
   useEffect(() => {
     try {
@@ -85,6 +87,15 @@ export default function Home() {
       setDrafts(JSON.parse(localStorage.getItem("syu-drafts") || "[]"));
     } catch { /* Ignore outdated local data. */ }
   }, []);
+
+  useEffect(() => {
+    if (!user || !marketplace) { setMyListings([]); setPendingListings([]); return; }
+    let active = true;
+    Promise.all([loadMyListings(user.id), user.app_metadata?.role === "admin" ? loadPendingListings() : Promise.resolve([])])
+      .then(([own, pending]) => { if (active) { setMyListings(own); setPendingListings(pending); } })
+      .catch(() => { if (active) setListingError("Не успяхме да заредим обявите в профила."); });
+    return () => { active = false; };
+  }, [user]);
 
   useEffect(() => {
     if (!marketplace) return;
@@ -161,7 +172,7 @@ export default function Home() {
         seller_id: user.id, make: draftForm.make.trim(), model: draftForm.model.trim(),
         year: Number(draftForm.year), mileage_km: Number(draftForm.mileage), price_eur: Number(draftForm.price),
         fuel: draftForm.fuel, gearbox: draftForm.gearbox, city: draftForm.city.trim(), body: draftForm.body,
-        status: "draft"
+        details: draftForm.details.trim(), status: "draft"
       }).select("id").single();
       if (error || !data) throw error || new Error("Обявата не е запазена.");
       const paths: string[] = [];
@@ -172,14 +183,37 @@ export default function Home() {
         if (uploaded.error) throw uploaded.error;
         paths.push(path);
       }
-      const updated = await marketplace.from("car_listings").update({ photo_paths: paths, status: "pending" }).eq("id", data.id);
+      const updated = await marketplace.from("car_listings").update({ photo_paths: paths, status: "pending" }).eq("id", data.id).select("id").single();
       if (updated.error) throw updated.error;
       setPhotos([]);
-      setDraftForm({ make: "", model: "", year: "", mileage: "", price: "", fuel: "Бензин", gearbox: "Ръчна", city: "", body: "Седан" });
+      setDraftForm({ make: "", model: "", year: "", mileage: "", price: "", fuel: "Бензин", gearbox: "Ръчна", city: "", body: "Седан", details: "" });
+      try { setMyListings(await loadMyListings(user.id)); }
+      catch { setListingError("Обявата е изпратена, но списъкът в профила не се обнови. Презареди страницата."); }
       setNotice("Обявата е изпратена за преглед. Ще се вижда публично след одобрение.");
     } catch (error) {
       setListingError(`Не успяхме да изпратим обявата: ${error instanceof Error ? error.message : "Опитай отново."} Ако е създадена чернова, тя остава в профила ти.`);
     } finally { setBusy(false); }
+  }
+
+  async function moderateListing(id: string, status: "active" | "archived") {
+    if (!marketplace || user?.app_metadata?.role !== "admin" || busy) return;
+    setBusy(true); setListingError("");
+    const { error } = await marketplace.from("car_listings").update({ status }).eq("id", id).eq("status", "pending").select("id").single();
+    if (error) setListingError(`Не успяхме да променим обявата: ${error.message}`);
+    else {
+      setPendingListings((old) => old.filter((row) => row.id !== id));
+      if (status === "active") {
+        try {
+          const rows = await loadActiveListings();
+          setLiveCars(rows.map((row) => ({ id: row.id, make: row.make, model: row.model,
+            title: `${row.make} ${row.model}`, year: row.year, mileage: row.mileage_km, price: row.price_eur,
+            fuel: row.fuel, gearbox: row.gearbox, city: row.city, body: row.body,
+            photo: 0, imageUrl: row.imageUrl, details: row.details })));
+        } catch { setListingError("Обявата е одобрена, но каталогът не се обнови. Презареди страницата."); }
+      }
+      setNotice(status === "active" ? "Обявата е одобрена и вече е публична." : "Обявата е отхвърлена.");
+    }
+    setBusy(false);
   }
 
   function selectPhotos(files: FileList | null) {
@@ -253,7 +287,7 @@ export default function Home() {
         <div className="section-head"><div><span className="section-kicker">РАЗГЛЕДАЙ ПАЗАРА</span><h2>Търси по категория</h2></div><button className="text-link" onClick={() => { setFilters(initialFilters); navigate("results"); }}>Всички обяви <Icon name="arrow" size={17} /></button></div>
         <div className="category-grid">{categories.map((category, index) => <button key={category} className="category-tile" onClick={() => categorySearch(category)}><span className={`category-image photo-${[3,0,2,4,5,5,4][index]}`} /><span>{category}</span><Icon name="arrow" size={16} /></button>)}</div>
         <div className="section-head listings-head"><div><span className="section-kicker">ПЪРВА ВЕРСИЯ</span><h2>{marketplace ? "Последни обяви" : "Примерни обяви"}</h2><p>{marketplace ? "Обявите се показват след преглед." : "Данните и снимките тук са демонстрационни."}</p></div><button className="text-link" onClick={() => { setFilters(initialFilters); navigate("results"); }}>Виж всички <Icon name="arrow" size={17} /></button></div>
-        <div className="cards-grid">{cars.slice(0, 4).map((car) => <CarCard car={car} key={car.id} />)}</div>
+        {cars.length ? <div className="cards-grid">{cars.slice(0, 4).map((car) => <CarCard car={car} key={car.id} />)}</div> : <div className="empty-state"><Icon name="car" size={36} /><h2>Очакваме първите обяви</h2><p>Публикуваните след преглед автомобили ще се появят тук.</p></div>}
         {listingError && <p role="alert" className="notice">{listingError}</p>}<div className="benefits"><div><Icon name="search" size={30} /><strong>Търсене с филтри</strong><p>Марка, бюджет, гориво и още.</p></div><div><Icon name="heart" size={30} /><strong>Любими автомобили</strong><p>Запази интересните обяви.</p></div><div><Icon name="car" size={30} /><strong>Обяви на едно място</strong><p>Разгледай детайлите удобно.</p></div><div><Icon name="plus" size={30} /><strong>Подготви обява</strong><p>{marketplace ? "Изпрати за преглед." : "Създай чернова в браузъра."}</p></div></div>
       </main>
     </>}
@@ -272,7 +306,14 @@ export default function Home() {
       {(!marketplace || user) && <form className="post-form" onSubmit={marketplace ? saveLiveListing : saveDraft}><div className="form-grid">
       {([ ["make", "Марка", "Напр. Volkswagen"], ["model", "Модел", "Напр. Golf"], ["year", "Година", "Напр. 2020"], ["mileage", "Пробег (км)", "Напр. 85000"], ["price", "Цена (€)", "Напр. 15900"], ["city", "Град", "Напр. Бургас"] ] as const).map(([key, label, placeholder]) => <label key={key}>{label}<input required type={["year", "mileage", "price"].includes(key) ? "number" : "text"} min="0" placeholder={placeholder} value={draftForm[key]} onChange={(e) => setDraftForm({ ...draftForm, [key]: e.target.value })} /></label>)}
       {([ ["fuel", "Гориво", ["Бензин", "Дизел", "Хибрид", "Електрически"]], ["gearbox", "Скоростна кутия", ["Ръчна", "Автоматична"]], ["body", "Купе", categories] ] as const).map(([key, label, options]) => <label key={key}>{label}<select value={draftForm[key]} onChange={(e) => setDraftForm({ ...draftForm, [key]: e.target.value })}>{options.map((option) => <option key={option}>{option}</option>)}</select></label>)}
-    </div>{marketplace && <label className="photo-input">Снимки (до 8, по 5 MB)<input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={(event) => selectPhotos(event.target.files)} />{photos.length > 0 && <small>{photos.length} избрани</small>}</label>}<button className="primary-button" type="submit" disabled={busy}><Icon name="plus" size={18} /> {marketplace ? busy ? "Изпращане…" : "Изпрати за преглед" : "Запази чернова"}</button><p className="form-note">{marketplace ? "Продавачът ще може да вижда състоянието на обявата в следващия етап." : "Тази версия не публикува обяви онлайн. Снимките, профилите и публичното публикуване са следваща стъпка."}</p></form>}</main>}
+    </div>{marketplace && <><label className="photo-input">Описание<textarea maxLength={5000} rows={5} placeholder="Състояние, оборудване, сервизна история…" value={draftForm.details} onChange={(event) => setDraftForm({ ...draftForm, details: event.target.value })} /></label><label className="photo-input">Снимки (до 8, по 5 MB)<input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={(event) => selectPhotos(event.target.files)} />{photos.length > 0 && <small>{photos.length} избрани</small>}</label></>}<button className="primary-button" type="submit" disabled={busy}><Icon name="plus" size={18} /> {marketplace ? busy ? "Изпращане…" : "Изпрати за преглед" : "Запази чернова"}</button><p className="form-note">{marketplace ? "Ще виждаш състоянието на обявата си по-долу." : "Тази версия не публикува обяви онлайн. Снимките, профилите и публичното публикуване са следваща стъпка."}</p></form>}
+      {marketplace && user && <section className="account-section"><div className="account-heading"><div><span className="section-kicker">МОЯТ ПРОФИЛ</span><h2>Моите обяви</h2><p>{user.email}</p></div><button className="text-link" onClick={() => marketplace.auth.signOut()}>Изход</button></div>
+        {myListings.length ? <div className="account-list">{myListings.map((row) => <article className="account-row" key={row.id}><CarPhoto photo={0} imageUrl={row.imageUrl} /><div><strong>{row.make} {row.model}</strong><small>{row.year} · {euro(row.price_eur)} · {row.city}</small><span className={`status-pill status-${row.status}`}>{{ draft: "Чернова", pending: "Чака одобрение", active: "Публикувана", archived: "Отхвърлена / архивирана" }[row.status]}</span></div></article>)}</div> : <p className="account-empty">Все още нямаш изпратени обяви.</p>}
+      </section>}
+      {marketplace && user?.app_metadata?.role === "admin" && <section className="account-section"><div className="account-heading"><div><span className="section-kicker">АДМИНИСТРАЦИЯ</span><h2>Чакащи обяви</h2></div></div>
+        {pendingListings.length ? <div className="account-list">{pendingListings.map((row) => <article className="account-row moderator-row" key={row.id}><CarPhoto photo={0} imageUrl={row.imageUrl} /><div><strong>{row.make} {row.model}</strong><small>{row.year} · {number(row.mileage_km)} км · {euro(row.price_eur)} · {row.city}</small><small>Продавач: {row.seller_id}</small><p>{row.details || "Няма добавено описание."}</p><div className="moderator-actions"><button disabled={busy} onClick={() => moderateListing(row.id, "active")}>Одобри</button><button disabled={busy} onClick={() => moderateListing(row.id, "archived")}>Отхвърли</button></div></div></article>)}</div> : <p className="account-empty">Няма обяви за преглед.</p>}
+      </section>}
+    </main>}
 
     <footer className="site-footer"><div className="page-width footer-inner"><div><strong><em>SYU</em> AUTO</strong><p>Автомобили в България — проект в разработка.</p></div><div><button onClick={() => navigate("home")}>Начало</button><button onClick={() => { setFilters(initialFilters); navigate("results"); }}>Обяви</button><button onClick={() => navigate("post")}>Подготви обява</button></div><small>© 2026 SYU AUTO · Демонстрационна версия</small></div></footer>
   </div>;
