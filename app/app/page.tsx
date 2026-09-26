@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { loadActiveListings, loadMyListings, loadPendingListings, marketplace, type ListingRow } from "../lib/marketplace";
+import { estimateCar, type Exterior, type Valuation } from "../lib/valuation";
 
 type Car = {
   id: number | string;
@@ -23,7 +24,7 @@ type Car = {
   details?: string;
 };
 
-type View = "home" | "results" | "detail" | "favorites" | "post" | "valuation" | "assistant";
+type View = "home" | "results" | "detail" | "favorites" | "post" | "valuation";
 type Filters = { make: string; model: string; min: string; max: string; fuel: string; city: string; body: string; year: string; gearbox: string };
 
 const initialFilters: Filters = { make: "", model: "", min: "", max: "", fuel: "", city: "", body: "", year: "", gearbox: "" };
@@ -38,22 +39,7 @@ const demoCars: Car[] = [
 const categories = ["Хечбек", "Седан", "Комби", "SUV / Джип", "Купе", "Кабрио", "Бусове"];
 const euro = (n: number) => new Intl.NumberFormat("bg-BG").format(n) + " €";
 const number = (n: number) => new Intl.NumberFormat("bg-BG").format(n);
-
-function estimateValue(cars: Car[], make: string, model: string, year: number, mileage: number, condition: string) {
-  // Only real, approved listings are suitable as market comparables.
-  const comparable = cars.filter((car) => !car.draft && car.make.toLocaleLowerCase("bg") === make.trim().toLocaleLowerCase("bg") &&
-    car.model.toLocaleLowerCase("bg") === model.trim().toLocaleLowerCase("bg") && Math.abs(car.year - year) <= 2 && car.price > 0 && car.mileage >= 0);
-  if (comparable.length < 3) return null;
-  const adjusted = comparable.map((car) => {
-    const ageAdjustment = Math.max(0.65, Math.min(1.35, 1 + (year - car.year) * 0.075));
-    const mileageAdjustment = Math.max(0.7, Math.min(1.3, 1 + (car.mileage - mileage) / 200000));
-    return car.price * ageAdjustment * mileageAdjustment;
-  }).sort((a, b) => a - b);
-  const middle = adjusted.length % 2 ? adjusted[Math.floor(adjusted.length / 2)] : (adjusted[adjusted.length / 2 - 1] + adjusted[adjusted.length / 2]) / 2;
-  const conditionFactor = condition === "Забележки" ? 0.9 : condition === "Сериозни забележки" ? 0.75 : 1;
-  const central = middle * conditionFactor;
-  return { low: Math.round(central * 0.9 / 100) * 100, high: Math.round(central * 1.1 / 100) * 100, count: comparable.length };
-}
+const exteriorLabels: Record<Exterior, string> = { excellent: "Без забележки", normal: "Нормални следи от употреба", scratches: "Леки драскотини", dents: "Видими драскотини или вдлъбнатини", damage: "Сериозни външни забележки" };
 
 function Icon({ name, size = 20, fill = "none" }: { name: string; size?: number; fill?: string }) {
   const paths: Record<string, React.ReactNode> = {
@@ -69,6 +55,7 @@ function Icon({ name, size = 20, fill = "none" }: { name: string; size?: number;
     menu: <path d="M3 6h18M3 12h18M3 18h18" />,
     close: <path d="M5 5 19 19M19 5 5 19" />,
     chevron: <path d="m7 10 5 5 5-5" />,
+    spark: <><path d="m12 2 1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8L12 2ZM19 17l.7 1.3L21 19l-1.3.7L19 21l-.7-1.3L17 19l1.3-.7L19 17Z" /></>,
   };
   return <svg width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
 }
@@ -92,14 +79,19 @@ export default function Home() {
   const [photos, setPhotos] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
   const [listingError, setListingError] = useState("");
+  const [valuationForm, setValuationForm] = useState<{ make: string; model: string; year: string; mileage: string; exterior: Exterior }>({ make: "", model: "", year: "", mileage: "", exterior: "normal" });
+  const [valuation, setValuation] = useState<Valuation | null>(null);
+  const [valuationSubmitted, setValuationSubmitted] = useState(false);
+  const [assistantOpen, setAssistantOpen] = useState(false);
+  const [assistantInput, setAssistantInput] = useState("");
+  const [assistantBusy, setAssistantBusy] = useState(false);
+  const [chat, setChat] = useState<{ role: "user" | "assistant"; content: string; demo?: boolean }[]>([
+    { role: "assistant", content: "Здравей! Мога да помогна да потърсиш кола сред наличните обяви или да те насоча към оценката.", demo: true },
+  ]);
   const [sort, setSort] = useState("newest");
   const [mobileMenu, setMobileMenu] = useState(false);
   const [notice, setNotice] = useState("");
   const [draftForm, setDraftForm] = useState({ make: "", model: "", year: "", mileage: "", price: "", fuel: "Бензин", gearbox: "Ръчна", city: "", body: "Седан", details: "" });
-  const [valuation, setValuation] = useState({ make: "", model: "", year: "", mileage: "", condition: "Без забележки" });
-  const [valuationRequested, setValuationRequested] = useState(false);
-  const [assistant, setAssistant] = useState({ budget: "", body: "", fuel: "" });
-  const [assistantRequested, setAssistantRequested] = useState(false);
 
   useEffect(() => {
     try {
@@ -147,11 +139,6 @@ export default function Home() {
   const selected = cars.find((car) => car.id === selectedId) || cars[0];
   const shownCars = view === "favorites" ? cars.filter((car) => favorites.includes(car.id)) : matches;
   const makes = [...new Set(cars.map((car) => car.make))].sort();
-  const valueResult = valuationRequested && marketplace && Number(valuation.year) >= 1950 && Number(valuation.year) <= new Date().getFullYear() + 1 && Number(valuation.mileage) >= 0
-    ? estimateValue(liveCars, valuation.make, valuation.model, Number(valuation.year), Number(valuation.mileage), valuation.condition) : null;
-  const assistantMatches = assistantRequested ? cars.filter((car) =>
-    (!assistant.budget || car.price <= Number(assistant.budget)) && (!assistant.body || car.body === assistant.body) && (!assistant.fuel || car.fuel === assistant.fuel)
-  ).sort((a, b) => b.year - a.year || a.mileage - b.mileage).slice(0, 3) : [];
 
   function navigate(next: View) {
     setView(next);
@@ -266,6 +253,54 @@ export default function Home() {
     setNotice("Черновата е запазена само в този браузър. За публични обяви ще добавим профили и база данни.");
   }
 
+  function valueCar(event: FormEvent) {
+    event.preventDefault();
+    const result = estimateCar({ make: valuationForm.make.trim(), model: valuationForm.model.trim(),
+      year: Number(valuationForm.year), mileage: Number(valuationForm.mileage), exterior: valuationForm.exterior }, cars, !marketplace);
+    setValuation(result);
+    setValuationSubmitted(true);
+  }
+
+  function localAssistantReply(question: string) {
+    const query = question.toLocaleLowerCase("bg");
+    if (/оцен|струва|цена на моя/.test(query)) return "Отвори „Оцени кола“ и въведи модел, година, пробег и външно състояние. При малко сравними обяви няма да показваме измислена пазарна цена.";
+    if (/публику|прода|кач/.test(query)) return "От „Публикувай обява“ можеш да попълниш данните и снимките. При свързана база обявата се изпраща за преглед.";
+    const budgetMatch = query.match(/до\s*([\d\s.,]+)\s*(?:€|евро)?/);
+    const budget = budgetMatch ? Number(budgetMatch[1].replace(/[^\d]/g, "")) : null;
+    const make = makes.find((name) => query.includes(name.toLocaleLowerCase("bg")));
+    const fuel = ["дизел", "бензин", "хибрид", "електрически"].find((name) => query.includes(name));
+    const city = [...new Set(cars.map((car) => car.city))].find((name) => query.includes(name.toLocaleLowerCase("bg")));
+    const suggestions = cars.filter((car) => (!budget || car.price <= budget) && (!make || car.make === make) &&
+      (!fuel || car.fuel.toLocaleLowerCase("bg") === fuel) && (!city || car.city === city)).slice(0, 3);
+    if (!cars.length) return "Все още няма публикувани обяви. Опитай пак, когато се появят първите автомобили.";
+    if (!suggestions.length) return "Няма съвпадение сред наличните обяви. Опитай с по-висок бюджет или друга марка.";
+    return `${marketplace ? "В каталога има" : "В примерния каталог има"}: ${suggestions.map((car) => `${car.title} (${car.year}, ${euro(car.price)})`).join("; ")}. Използвай филтрите за повече подробности.`;
+  }
+
+  async function askAssistant(event: FormEvent) {
+    event.preventDefault();
+    const question = assistantInput.trim().slice(0, 500);
+    if (!question || assistantBusy) return;
+    setAssistantInput(""); setAssistantBusy(true);
+    const previous = chat.slice(-6);
+    setChat((old) => [...old, { role: "user", content: question }]);
+    let answer = "";
+    let demo = true;
+    if (marketplace && user) {
+      try {
+        const { data } = await marketplace.auth.getSession();
+        if (data.session?.access_token) {
+          const response = await fetch("/api/assistant", { method: "POST", headers: {
+            "Content-Type": "application/json", Authorization: `Bearer ${data.session.access_token}` },
+            body: JSON.stringify({ message: question, history: previous.map(({ role, content }) => ({ role, content })) }) });
+          if (response.ok) { const result = await response.json() as { answer?: string }; answer = result.answer || ""; demo = !answer; }
+        }
+      } catch { /* The local guide stays available when the AI service is offline. */ }
+    }
+    setChat((old) => [...old, { role: "assistant", content: answer || localAssistantReply(question), demo }]);
+    setAssistantBusy(false);
+  }
+
   function CarCard({ car }: { car: Car }) {
     return <article className="car-card">
       <button className="car-image-button" onClick={() => openCar(car.id)} aria-label={`Виж ${car.title}`}>
@@ -290,9 +325,8 @@ export default function Home() {
           <button className={view === "home" ? "active" : ""} onClick={() => navigate("home")}>Начало</button>
           <button className={view === "results" ? "active" : ""} onClick={() => { setFilters(initialFilters); navigate("results"); }}>Обяви</button>
           <button onClick={() => { navigate("home"); setTimeout(() => document.getElementById("search")?.scrollIntoView({ behavior: "smooth" }), 50); }}>Търсене</button>
+          <button className={view === "valuation" ? "active" : ""} onClick={() => navigate("valuation")}>Оцени кола</button>
           <button className={view === "favorites" ? "active" : ""} onClick={() => navigate("favorites")}>Любими {favorites.length > 0 && <span className="nav-count">{favorites.length}</span>}</button>
-          <button className={view === "valuation" ? "active" : ""} onClick={() => navigate("valuation")}>Оценка</button>
-          <button className={view === "assistant" ? "active" : ""} onClick={() => navigate("assistant")}>Асистент</button>
         </nav>
         <div className="header-actions">
           <button className="header-heart" onClick={() => navigate("favorites")} aria-label="Любими"><Icon name="heart" size={22} />{favorites.length > 0 && <span className="heart-count">{favorites.length}</span>}</button>
@@ -313,28 +347,12 @@ export default function Home() {
       <main className="page-width home-content">
         <div className="section-head"><div><span className="section-kicker">РАЗГЛЕДАЙ ПАЗАРА</span><h2>Търси по категория</h2></div><button className="text-link" onClick={() => { setFilters(initialFilters); navigate("results"); }}>Всички обяви <Icon name="arrow" size={17} /></button></div>
         <div className="category-grid">{categories.map((category, index) => <button key={category} className="category-tile" onClick={() => categorySearch(category)}><span className={`category-image photo-${[3,0,2,4,5,5,4][index]}`} /><span>{category}</span><Icon name="arrow" size={16} /></button>)}</div>
+        <section className="valuation-promo"><div><span className="section-kicker">НОВО В SYU AUTO</span><h2>Колко струва твоята кола?</h2><p>Въведи година, пробег и външни забележки за ориентировъчен диапазон.</p></div><button className="primary-button" onClick={() => navigate("valuation")}>Оцени кола <Icon name="arrow" size={17} /></button></section>
         <div className="section-head listings-head"><div><span className="section-kicker">ПЪРВА ВЕРСИЯ</span><h2>{marketplace ? "Последни обяви" : "Примерни обяви"}</h2><p>{marketplace ? "Обявите се показват след преглед." : "Данните и снимките тук са демонстрационни."}</p></div><button className="text-link" onClick={() => { setFilters(initialFilters); navigate("results"); }}>Виж всички <Icon name="arrow" size={17} /></button></div>
         {cars.length ? <div className="cards-grid">{cars.slice(0, 4).map((car) => <CarCard car={car} key={car.id} />)}</div> : <div className="empty-state"><Icon name="car" size={36} /><h2>Очакваме първите обяви</h2><p>Публикуваните след преглед автомобили ще се появят тук.</p></div>}
-        <div className="tools-promo"><div><span className="section-kicker">ПОМОЩ ПРИ ИЗБОРА</span><h2>Намери подходяща кола</h2><p>Получавай предложения от обявите или провери ориентировъчен ценови диапазон.</p></div><div><button className="primary-button" onClick={() => navigate("assistant")}>Асистент за избор</button><button className="secondary-button" onClick={() => navigate("valuation")}>Оцени автомобил</button></div></div>
         {listingError && <p role="alert" className="notice">{listingError}</p>}<div className="benefits"><div><Icon name="search" size={30} /><strong>Търсене с филтри</strong><p>Марка, бюджет, гориво и още.</p></div><div><Icon name="heart" size={30} /><strong>Любими автомобили</strong><p>Запази интересните обяви.</p></div><div><Icon name="car" size={30} /><strong>Обяви на едно място</strong><p>Разгледай детайлите удобно.</p></div><div><Icon name="plus" size={30} /><strong>Подготви обява</strong><p>{marketplace ? "Изпрати за преглед." : "Създай чернова в браузъра."}</p></div></div>
       </main>
     </>}
-
-    {view === "valuation" && <main className="page-width interior tool-page"><div className="interior-heading"><span className="section-kicker">SYU AUTO · ЦЕНОВИ ОРИЕНТИР</span><h1>Ориентировъчна оценка</h1><p>Сравняваме публикувани обяви със същата марка и модел и близка година. Това е ориентир по обявени цени, а не професионална оценка или гарантирана продажна цена.</p></div>
-      <form className="post-form tool-form" onSubmit={(event) => { event.preventDefault(); setValuationRequested(true); }}><div className="form-grid">
-        <label>Марка<input required value={valuation.make} onChange={(event) => { setValuation({ ...valuation, make: event.target.value }); setValuationRequested(false); }} placeholder="Напр. Volkswagen" /></label>
-        <label>Модел<input required value={valuation.model} onChange={(event) => { setValuation({ ...valuation, model: event.target.value }); setValuationRequested(false); }} placeholder="Напр. Golf" /></label>
-        <label>Година<input required type="number" min="1950" max={new Date().getFullYear() + 1} value={valuation.year} onChange={(event) => { setValuation({ ...valuation, year: event.target.value }); setValuationRequested(false); }} /></label>
-        <label>Пробег (км)<input required type="number" min="0" max="2000000" value={valuation.mileage} onChange={(event) => { setValuation({ ...valuation, mileage: event.target.value }); setValuationRequested(false); }} /></label>
-        <label>Външно състояние<select value={valuation.condition} onChange={(event) => { setValuation({ ...valuation, condition: event.target.value }); setValuationRequested(false); }}><option>Без забележки</option><option>Забележки</option><option>Сериозни забележки</option></select></label>
-      </div><button className="primary-button" type="submit">Провери ориентир</button></form>
-      {valuationRequested && <div className="tool-result" role="status">{valueResult ? <><span className="section-kicker">НА БАЗА НА {valueResult.count} ОБЯВИ</span><h2>{euro(valueResult.low)} – {euro(valueResult.high)}</h2><p>Приблизителен диапазон по обявени цени. Възрастта, пробегът и посоченото външно състояние са отчетени ориентировъчно. История, оборудване, техническо състояние и реални сделки не са проверени.</p></> : <><h2>Все още няма надеждна оценка</h2><p>{marketplace ? "Нужни са поне 3 активни обяви със същата марка и модел и година в рамките на ±2 години. Опитай отново, когато каталогът се попълни." : "Оценката ще стане достъпна след включване на публичния каталог и поне 3 сравними реални обяви. Демонстрационните цени не се използват."}</p></>}</div>}
-    </main>}
-
-    {view === "assistant" && <main className="page-width interior tool-page"><div className="interior-heading"><span className="section-kicker">SYU AUTO · ПОМОЩ ПРИ ИЗБОРА</span><h1>Асистент за избор на автомобил</h1><p>Кажи какво търсиш и ще покажем подходящи обяви от каталога. В момента предложенията са по зададените филтри.</p></div>
-      <form className="post-form tool-form" onSubmit={(event) => { event.preventDefault(); setAssistantRequested(true); }}><div className="form-grid"><label>Максимален бюджет (€)<input type="number" min="1" value={assistant.budget} onChange={(event) => { setAssistant({ ...assistant, budget: event.target.value }); setAssistantRequested(false); }} placeholder="Напр. 20000" /></label><label>Купе<select value={assistant.body} onChange={(event) => { setAssistant({ ...assistant, body: event.target.value }); setAssistantRequested(false); }}><option value="">Без предпочитание</option>{categories.map((body) => <option key={body}>{body}</option>)}</select></label><label>Гориво<select value={assistant.fuel} onChange={(event) => { setAssistant({ ...assistant, fuel: event.target.value }); setAssistantRequested(false); }}><option value="">Без предпочитание</option>{["Бензин", "Дизел", "Хибрид", "Електрически"].map((fuel) => <option key={fuel}>{fuel}</option>)}</select></label></div><button className="primary-button" type="submit">Покажи предложения</button></form>
-      {assistantRequested && <section className="assistant-results" aria-live="polite"><h2>{assistantMatches.length ? "Подходящи предложения" : "Няма подходящи обяви"}</h2><p>{marketplace ? "Показваме активни обяви от каталога." : "Показваме демонстрационни обяви и локални чернови."}</p>{assistantMatches.length ? <div className="cards-grid">{assistantMatches.map((car) => <CarCard key={car.id} car={car} />)}</div> : <p>Промени бюджета или предпочитанията и опитай пак.</p>}</section>}
-    </main>}
 
     {(view === "results" || view === "favorites") && <main className="page-width interior"><div className="interior-heading"><div><span className="section-kicker">SYU AUTO · {marketplace ? "ОБЯВИ" : "ДЕМО КАТАЛОГ"}</span><h1>{view === "favorites" ? "Любими автомобили" : "Автомобили"}</h1><p>{view === "favorites" ? `${shownCars.length} ${shownCars.length === 1 ? "запазена обява" : "запазени обяви"} в този браузър` : `${shownCars.length} ${shownCars.length === 1 ? "резултат" : "резултата"} ${marketplace ? "в каталога" : "от примерните обяви и твоите чернови"}`}</p></div></div>
       {view === "results" && <div className="results-search">{SearchForm()}</div>}
@@ -343,6 +361,18 @@ export default function Home() {
     </main>}
 
     {view === "detail" && selected && <main className="page-width interior detail-page"><button className="back-link" onClick={() => navigate("results")}>← Обратно към обявите</button>{notice && <div className="notice">{notice}</div>}<div className="detail-layout"><div><CarPhoto photo={selected.photo} imageUrl={selected.imageUrl} className="detail-photo" /><p className="photo-note">{selected.draft ? "Черновата използва илюстративна снимка." : marketplace ? selected.imageUrl ? "Снимка, качена от продавача." : "Все още няма добавена снимка." : "Демонстрационна обява · снимката е илюстративна."}</p></div><div className="detail-panel"><span className="section-kicker">{selected.draft ? "ЛОКАЛНА ЧЕРНОВА" : marketplace ? "ОБЯВА" : "ПРИМЕРНА ОБЯВА"}</span><h1>{selected.title}</h1><p className="detail-price">{euro(selected.price)}</p><p className="detail-city"><Icon name="pin" size={17} />{selected.city}</p><div className="spec-grid"><span>Година<strong>{selected.year}</strong></span><span>Пробег<strong>{number(selected.mileage)} км</strong></span><span>Гориво<strong>{selected.fuel}</strong></span><span>Скоростна кутия<strong>{selected.gearbox}</strong></span><span>Купе<strong>{selected.body}</strong></span></div><button className="primary-button wide" onClick={() => toggleFavorite(selected.id)}><Icon name="heart" size={19} fill={favorites.includes(selected.id) ? "currentColor" : "none"} />{favorites.includes(selected.id) ? "Запазено в любими" : "Запази в любими"}</button>{selected.details && <p className="detail-description">{selected.details}</p>}<div className="detail-hint">Съобщенията до продавача ще бъдат добавени в следващ етап.</div></div></div></main>}
+
+    {view === "valuation" && <main className="page-width interior valuation-page"><div className="interior-heading"><span className="section-kicker">SYU AUTO · ОРИЕНТИР</span><h1>Оцени своя автомобил</h1><p>Сравняваме обявени цени за същия модел и правим приблизителна корекция за година, пробег и външен вид.</p></div>
+      <div className="valuation-layout"><form className="post-form valuation-form" onSubmit={valueCar}><div className="form-grid">
+        <label>Марка<input required list="valuation-makes" value={valuationForm.make} onChange={(event) => { setValuationForm({ ...valuationForm, make: event.target.value, model: "" }); setValuationSubmitted(false); }} placeholder="Напр. Toyota" /><datalist id="valuation-makes">{makes.map((make) => <option key={make} value={make} />)}</datalist></label>
+        <label>Модел<input required list="valuation-models" value={valuationForm.model} onChange={(event) => { setValuationForm({ ...valuationForm, model: event.target.value }); setValuationSubmitted(false); }} placeholder="Напр. Corolla" /><datalist id="valuation-models">{[...new Set(cars.filter((car) => car.make.toLocaleLowerCase("bg") === valuationForm.make.toLocaleLowerCase("bg")).map((car) => car.model))].map((model) => <option key={model} value={model} />)}</datalist></label>
+        <label>Година<input required type="number" min="1980" max={new Date().getFullYear() + 1} value={valuationForm.year} onChange={(event) => { setValuationForm({ ...valuationForm, year: event.target.value }); setValuationSubmitted(false); }} placeholder="Напр. 2020" /></label>
+        <label>Пробег (км)<input required type="number" min="0" max="1000000" value={valuationForm.mileage} onChange={(event) => { setValuationForm({ ...valuationForm, mileage: event.target.value }); setValuationSubmitted(false); }} placeholder="Напр. 85000" /></label>
+      </div><label className="valuation-condition">Външно състояние<select value={valuationForm.exterior} onChange={(event) => { setValuationForm({ ...valuationForm, exterior: event.target.value as Exterior }); setValuationSubmitted(false); }}>{(Object.entries(exteriorLabels) as [Exterior, string][]).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+      <button className="primary-button" type="submit"><Icon name="search" size={18} /> Покажи ориентир</button></form>
+      <aside className="valuation-result" aria-live="polite">{valuation ? <><span className="section-kicker">{valuation.demo ? "ПРИМЕРНА ОЦЕНКА" : "ОРИЕНТИР ОТ АКТИВНИ ОБЯВИ"}</span><h2>{euro(valuation.low)} – {euro(valuation.high)}</h2><strong>Средна отправна точка: {euro(valuation.mid)}</strong><p>Използвани са {valuation.count} {valuation.count === 1 ? "сравнима обява" : "сравними обяви"} за {valuationForm.make} {valuationForm.model}.</p><p className="valuation-caution">{valuation.demo ? "Това е демонстрация с примерни, измислени обяви. Сумата не е пазарна оценка." : "Това са цени в обяви, не доказани продажни цени. Диапазонът е груб ориентир и не отчита техническо състояние, оборудване, история или ремонти."}</p></> : valuationSubmitted ? <><h2>Няма достатъчно сравними коли</h2><p>{marketplace ? "За реален ориентир трябват поне 3 активни обяви за същия модел в близки години." : "В примерния каталог няма този модел в близки години. Опитай с модел от предложенията."}</p></> : <><Icon name="car" size={32} /><h2>Попълни данните</h2><p>Ще покажем диапазон и колко сравними обяви са използвани.</p></>}</aside></div>
+      <p className="valuation-footnote">Алгоритъмът използва приблизителни корекции: до 7% за година и 1,5% за 10 000 км, с ограничение за големи разлики; външните забележки намаляват ориентира. Тези коефициенти са начални допускания и предстои калибриране с реални данни.</p>
+    </main>}
 
     {view === "post" && <main className="page-width interior post-page"><div className="interior-heading"><span className="section-kicker">SYU AUTO</span><h1>{marketplace ? "Публикувай обява" : "Подготви обява"}</h1><p>{marketplace ? "Попълни данните и снимките. Обявата се публикува след преглед." : "Създай чернова на автомобила. Тя се пази само в този браузър и не е публична."}</p></div>
       {notice && <div role="status" className="notice">{notice}</div>}{listingError && <div role="alert" className="notice">{listingError}</div>}
@@ -359,7 +389,9 @@ export default function Home() {
       </section>}
     </main>}
 
-    <footer className="site-footer"><div className="page-width footer-inner"><div><strong><em>SYU</em> AUTO</strong><p>Автомобили в България — проект в разработка.</p></div><div><button onClick={() => navigate("home")}>Начало</button><button onClick={() => { setFilters(initialFilters); navigate("results"); }}>Обяви</button><button onClick={() => navigate("assistant")}>Асистент</button><button onClick={() => navigate("valuation")}>Оценка</button><button onClick={() => navigate("post")}>Подготви обява</button></div><small>© 2026 SYU AUTO · Демонстрационна версия</small></div></footer>
+    <footer className="site-footer"><div className="page-width footer-inner"><div><strong><em>SYU</em> AUTO</strong><p>Автомобили в България — проект в разработка.</p></div><div><button onClick={() => navigate("home")}>Начало</button><button onClick={() => { setFilters(initialFilters); navigate("results"); }}>Обяви</button><button onClick={() => navigate("valuation")}>Оцени кола</button><button onClick={() => navigate("post")}>Подготви обява</button></div><small>© 2026 SYU AUTO · Демонстрационна версия</small></div></footer>
+    <button className="assistant-launch" onClick={() => setAssistantOpen((old) => !old)} aria-label={assistantOpen ? "Затвори асистента" : "Отвори асистента"}><Icon name={assistantOpen ? "close" : "spark"} size={23} /><span>{assistantOpen ? "Затвори" : "Попитай SYU"}</span></button>
+    {assistantOpen && <section className="assistant-panel" aria-label="SYU асистент"><div className="assistant-head"><div><strong>SYU помощник</strong><small>{marketplace && user ? "ИИ при свързана услуга · демо при липса на връзка" : "Демо насоки за обявите"}</small></div><button onClick={() => setAssistantOpen(false)} aria-label="Затвори"><Icon name="close" size={18} /></button></div><div className="assistant-messages" role="log" aria-live="polite">{chat.map((entry, index) => <div key={index} className={`assistant-message ${entry.role === "user" ? "from-user" : ""}`}>{entry.content}{entry.demo && <small>Демо отговор</small>}</div>)}{assistantBusy && <p>Подготвям отговор…</p>}</div><form className="assistant-input" onSubmit={askAssistant}><input aria-label="Въпрос към асистента" maxLength={500} value={assistantInput} onChange={(event) => setAssistantInput(event.target.value)} placeholder="Напр. Toyota до 22 000 €" /><button type="submit" disabled={assistantBusy || !assistantInput.trim()} aria-label="Изпрати въпроса"><Icon name="arrow" size={20} /></button></form></section>}
   </div>;
 
   function SearchForm() {
