@@ -160,3 +160,7 @@ button { cursor: pointer; }
   .form-grid { grid-template-columns: 1fr; }.post-form { padding: 18px; }.detail-photo { height: 250px; }
   .account-row { grid-template-columns: 100px 1fr; gap: 11px; }.account-row .car-photo { height: 95px; }
 }
+@media (max-width: 650px) {
+  .assistant-launch { width: 54px; height: 54px; padding: 0; justify-content: center; }
+  .assistant-launch span { display: none; }
+}
