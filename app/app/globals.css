@@ -98,6 +98,11 @@ button { cursor: pointer; }
 .back-link { margin-bottom: 19px; }.notice { border: 1px solid #ffd9a6; background: #fff8e8; color: #734b12; padding: 13px 16px; border-radius: 7px; margin-bottom: 20px; font-size: 13px; }
 .detail-layout { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(320px, 1fr); gap: 25px; }
 .detail-photo { height: 500px; border-radius: 12px; }
+.photo-thumbnails { display: flex; gap: 8px; overflow-x: auto; padding: 9px 2px 2px; }
+.photo-thumbnails button { flex: 0 0 74px; height: 58px; border: 2px solid transparent; border-radius: 7px; padding: 2px; background: white; cursor: pointer; }
+.photo-thumbnails button.selected { border-color: #d7192d; }
+.photo-thumbnails button:focus-visible { outline: 2px solid #1b3657; outline-offset: 2px; }
+.photo-thumbnails img { width: 100%; height: 100%; object-fit: cover; border-radius: 3px; }
 .photo-note { color: #7b8593; font-size: 12px; margin: 10px 0; }
 .detail-panel { border: 1px solid #e4e8ed; background: white; border-radius: 12px; padding: 29px; height: fit-content; }
 .detail-panel h1 { margin: 10px 0 5px; font-size: 31px; }
@@ -123,6 +128,9 @@ button { cursor: pointer; }
 .primary-button:disabled { cursor: wait; opacity: .65; transform: none; }.detail-description { margin-top: 20px; line-height: 1.6; white-space: pre-wrap; font-size: 14px; }
 .account-section { margin-top: 36px; }.account-heading { display: flex; justify-content: space-between; align-items: center; gap: 16px; }.account-heading h2 { margin: 5px 0; font-size: 22px; }.account-heading p { margin: 0; color: #687383; font-size: 13px; }
 .account-list { display: grid; gap: 12px; margin-top: 17px; }.account-row { display: grid; grid-template-columns: 140px 1fr; gap: 17px; overflow: hidden; background: white; border: 1px solid #e3e7ed; border-radius: 9px; padding: 10px; }.account-row .car-photo { height: 100px; border-radius: 5px; }.account-row > div:last-child { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; padding: 6px 0; }.account-row strong { font-size: 15px; }.account-row small { color: #697585; }.account-empty { margin-top: 15px; color: #687383; font-size: 14px; }
+.moderator-row { grid-template-columns: minmax(220px, 320px) 1fr; }
+.moderator-row .moderator-gallery .detail-photo { height: 220px; }
+.moderator-row .moderator-gallery .photo-thumbnails button { flex-basis: 56px; height: 48px; }
 .status-pill { display: inline-block; padding: 5px 8px; border-radius: 5px; background: #eff1f5; color: #4e5968; font-size: 11px; font-weight: 750; }.status-pending { background: #fff4dc; color: #805b05; }.status-active { background: #e4f6e9; color: #20733c; }.status-archived { background: #fbe6e9; color: #a82939; }
 .moderator-row p { margin: 5px 0; line-height: 1.5; white-space: pre-wrap; font-size: 13px; }.moderator-actions { display: flex; gap: 9px; margin-top: 6px; }.moderator-actions button { border: 1px solid #cbd1da; background: white; border-radius: 5px; padding: 8px 12px; font-size: 12px; font-weight: 700; }.moderator-actions button:first-child { color: white; background: #d7192d; border-color: #d7192d; }.moderator-actions button:disabled { opacity: .6; }
 .site-footer { background: #0c111a; color: #fff; padding: 37px 0; }.footer-inner { display: flex; justify-content: space-between; align-items: center; gap: 20px; }
@@ -159,6 +167,7 @@ button { cursor: pointer; }
   .car-card-body strong { white-space: normal; min-height: 31px; }.car-meta { min-height: 28px; }.benefits { padding: 18px; gap: 19px; }.benefits > div { display: block; }.benefits svg { margin-bottom: 7px; }
   .form-grid { grid-template-columns: 1fr; }.post-form { padding: 18px; }.detail-photo { height: 250px; }
   .account-row { grid-template-columns: 100px 1fr; gap: 11px; }.account-row .car-photo { height: 95px; }
+  .moderator-row { grid-template-columns: 1fr; }.moderator-row .moderator-gallery .detail-photo { height: 220px; }
 }
 @media (max-width: 650px) {
   .assistant-launch { width: 54px; height: 54px; padding: 0; justify-content: center; }
