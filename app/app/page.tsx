@@ -103,7 +103,7 @@ function PriceGuide({ car, catalog, demo }: { car: Car; catalog: Car[]; demo: bo
   const ratio = car.price / guide.mid;
   const level = ratio < 0.9 ? "Ниска спрямо ориентира" : ratio > 1.1 ? "Висока спрямо ориентира" : "Близка до ориентира";
   const color = ratio < 0.9 ? "#166534" : ratio > 1.1 ? "#9f1239" : "#805800";
-  const position = Math.max(3, Math.min(97, 50 + (ratio - 1) * 125));
+  const position = Math.max(3, Math.min(97, 50 + (ratio - 1) * 170));
   return <section className="price-guide" aria-label="Ориентир за цената">
     <strong>Ориентир за цената</strong>
     <div className="price-guide-heading"><span style={{ color }}>{level}</span><b>{euro(car.price)}</b></div>
@@ -271,7 +271,7 @@ export default function Home() {
       options: { emailRedirectTo: window.location.origin } });
     setBusy(false);
     setNotice(error ? `Не успяхме да изпратим линк: ${error.message}` : "Изпратихме линк за вход на посочения имейл.");
-  
+  }
 
   async function sendInquiry(event: FormEvent) {
     event.preventDefault();
