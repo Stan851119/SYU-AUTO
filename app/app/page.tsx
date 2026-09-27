@@ -21,6 +21,7 @@ type Car = {
   draft?: boolean;
   pending?: boolean;
   imageUrl?: string;
+  imageUrls?: string[];
   details?: string;
 };
 
@@ -62,6 +63,20 @@ function Icon({ name, size = 20, fill = "none" }: { name: string; size?: number;
 
 function CarPhoto({ photo, imageUrl, className = "" }: { photo: number; imageUrl?: string; className?: string }) {
   return <div className={`car-photo ${imageUrl ? "" : `photo-${photo}`} ${className}`} style={imageUrl ? { backgroundImage: `url(${imageUrl})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined} role="img" aria-label={imageUrl ? "Снимка на автомобила" : "Илюстративна снимка на автомобил"} />;
+}
+
+function PhotoGallery({ photo, imageUrls = [], className = "" }: { photo: number; imageUrls?: string[]; className?: string }) {
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const selected = imageUrls[selectedIndex] || imageUrls[0];
+  return <div className={`photo-gallery ${className}`}>
+    <CarPhoto photo={photo} imageUrl={selected} className="detail-photo" />
+    {imageUrls.length > 1 && <div className="photo-thumbnails" aria-label="Снимки на автомобила">
+      {imageUrls.map((url, index) => <button key={index} type="button" className={selectedIndex === index ? "selected" : ""}
+        onClick={() => setSelectedIndex(index)} aria-label={`Покажи снимка ${index + 1} от ${imageUrls.length}`} aria-pressed={selectedIndex === index}>
+        <img src={url} alt="" loading="lazy" />
+      </button>)}
+    </div>}
+  </div>;
 }
 
 export default function Home() {
@@ -121,7 +136,7 @@ export default function Home() {
       if (active) setLiveCars(rows.map((row) => ({ id: row.id, make: row.make, model: row.model,
         title: `${row.make} ${row.model}`, year: row.year, mileage: row.mileage_km, price: row.price_eur,
         fuel: row.fuel, gearbox: row.gearbox, city: row.city, body: row.body,
-        photo: 0, imageUrl: row.imageUrl, details: row.details })));
+        photo: 0, imageUrl: row.imageUrl, imageUrls: row.imageUrls, details: row.details })));
     }).catch(() => { if (active) setListingError("Обявите не могат да се заредят в момента."); });
     return () => { active = false; subscription.subscription.unsubscribe(); };
   }, []);
@@ -241,7 +256,7 @@ export default function Home() {
           setLiveCars(rows.map((row) => ({ id: row.id, make: row.make, model: row.model,
             title: `${row.make} ${row.model}`, year: row.year, mileage: row.mileage_km, price: row.price_eur,
             fuel: row.fuel, gearbox: row.gearbox, city: row.city, body: row.body,
-            photo: 0, imageUrl: row.imageUrl, details: row.details })));
+            photo: 0, imageUrl: row.imageUrl, imageUrls: row.imageUrls, details: row.details })));
         } catch { setListingError("Обявата е одобрена, но каталогът не се обнови. Презареди страницата."); }
       }
       setNotice(status === "active" ? "Обявата е одобрена и вече е публична." : "Обявата е отхвърлена.");
@@ -390,7 +405,7 @@ export default function Home() {
       {shownCars.length ? <div className="cards-grid results-grid">{shownCars.map((car) => <CarCard car={car} key={car.id} />)}</div> : <div className="empty-state"><Icon name={view === "favorites" ? "heart" : "search"} size={38} /><h2>{view === "favorites" ? "Още нямаш любими обяви" : "Няма съвпадения"}</h2><p>{view === "favorites" ? "Натисни сърцето на автомобил, който ти харесва." : "Промени някой от филтрите, за да видиш повече автомобили."}</p><button className="primary-button" onClick={() => { setFilters(initialFilters); navigate("results"); }}>Разгледай обявите</button></div>}
     </main>}
 
-    {view === "detail" && selected && <main className="page-width interior detail-page"><button className="back-link" onClick={() => navigate("results")}>← Обратно към обявите</button>{notice && <div className="notice">{notice}</div>}<div className="detail-layout"><div><CarPhoto photo={selected.photo} imageUrl={selected.imageUrl} className="detail-photo" /><p className="photo-note">{selected.draft ? "Черновата използва илюстративна снимка." : marketplace ? selected.imageUrl ? "Снимка, качена от продавача." : "Все още няма добавена снимка." : "Демонстрационна обява · снимката е илюстративна."}</p></div><div className="detail-panel"><span className="section-kicker">{selected.draft ? "ЛОКАЛНА ЧЕРНОВА" : marketplace ? "ОБЯВА" : "ПРИМЕРНА ОБЯВА"}</span><h1>{selected.title}</h1><p className="detail-price">{euro(selected.price)}</p><p className="detail-city"><Icon name="pin" size={17} />{selected.city}</p><div className="spec-grid"><span>Година<strong>{selected.year}</strong></span><span>Пробег<strong>{number(selected.mileage)} км</strong></span><span>Гориво<strong>{selected.fuel}</strong></span><span>Скоростна кутия<strong>{selected.gearbox}</strong></span><span>Купе<strong>{selected.body}</strong></span></div><button className="primary-button wide" onClick={() => toggleFavorite(selected.id)}><Icon name="heart" size={19} fill={favorites.includes(selected.id) ? "currentColor" : "none"} />{favorites.includes(selected.id) ? "Запазено в любими" : "Запази в любими"}</button><button className="compare-detail-button" onClick={() => toggleCompare(selected.id)} aria-pressed={compareIds.includes(selected.id)}>{compareIds.includes(selected.id) ? "✓ Добавена за сравнение" : "+ Добави за сравнение"}</button>{selected.details && <p className="detail-description">{selected.details}</p>}<div className="detail-hint">Съобщенията до продавача ще бъдат добавени в следващ етап.</div></div></div></main>}
+    {view === "detail" && selected && <main className="page-width interior detail-page"><button className="back-link" onClick={() => navigate("results")}>← Обратно към обявите</button>{notice && <div className="notice">{notice}</div>}<div className="detail-layout"><div><PhotoGallery key={selected.id} photo={selected.photo} imageUrls={selected.imageUrls || (selected.imageUrl ? [selected.imageUrl] : [])} /><p className="photo-note">{selected.draft ? "Черновата използва илюстративна снимка." : marketplace ? selected.imageUrl ? "Снимка, качена от продавача." : "Все още няма добавена снимка." : "Демонстрационна обява · снимката е илюстративна."}</p></div><div className="detail-panel"><span className="section-kicker">{selected.draft ? "ЛОКАЛНА ЧЕРНОВА" : marketplace ? "ОБЯВА" : "ПРИМЕРНА ОБЯВА"}</span><h1>{selected.title}</h1><p className="detail-price">{euro(selected.price)}</p><p className="detail-city"><Icon name="pin" size={17} />{selected.city}</p><div className="spec-grid"><span>Година<strong>{selected.year}</strong></span><span>Пробег<strong>{number(selected.mileage)} км</strong></span><span>Гориво<strong>{selected.fuel}</strong></span><span>Скоростна кутия<strong>{selected.gearbox}</strong></span><span>Купе<strong>{selected.body}</strong></span></div><button className="primary-button wide" onClick={() => toggleFavorite(selected.id)}><Icon name="heart" size={19} fill={favorites.includes(selected.id) ? "currentColor" : "none"} />{favorites.includes(selected.id) ? "Запазено в любими" : "Запази в любими"}</button><button className="compare-detail-button" onClick={() => toggleCompare(selected.id)} aria-pressed={compareIds.includes(selected.id)}>{compareIds.includes(selected.id) ? "✓ Добавена за сравнение" : "+ Добави за сравнение"}</button>{selected.details && <p className="detail-description">{selected.details}</p>}<div className="detail-hint">Съобщенията до продавача ще бъдат добавени в следващ етап.</div></div></div></main>}
 
     {view === "valuation" && <main className="page-width interior valuation-page"><div className="interior-heading"><span className="section-kicker">SYU AUTO · ОРИЕНТИР</span><h1>Оцени своя автомобил</h1><p>Сравняваме обявени цени за същия модел и правим приблизителна корекция за година, пробег и външен вид.</p></div>
       <div className="valuation-layout"><form className="post-form valuation-form" onSubmit={valueCar}><div className="form-grid">
@@ -415,7 +430,7 @@ export default function Home() {
         {myListings.length ? <div className="account-list">{myListings.map((row) => <article className="account-row" key={row.id}><CarPhoto photo={0} imageUrl={row.imageUrl} /><div><strong>{row.make} {row.model}</strong><small>{row.year} · {euro(row.price_eur)} · {row.city}</small><span className={`status-pill status-${row.status}`}>{{ draft: "Чернова", pending: "Чака одобрение", active: "Публикувана", archived: "Отхвърлена / архивирана" }[row.status]}</span></div></article>)}</div> : <p className="account-empty">Все още нямаш изпратени обяви.</p>}
       </section>}
       {marketplace && user?.app_metadata?.role === "admin" && <section className="account-section"><div className="account-heading"><div><span className="section-kicker">АДМИНИСТРАЦИЯ</span><h2>Чакащи обяви</h2></div></div>
-        {pendingListings.length ? <div className="account-list">{pendingListings.map((row) => <article className="account-row moderator-row" key={row.id}><CarPhoto photo={0} imageUrl={row.imageUrl} /><div><strong>{row.make} {row.model}</strong><small>{row.year} · {number(row.mileage_km)} км · {euro(row.price_eur)} · {row.city}</small><small>Продавач: {row.seller_id}</small><p>{row.details || "Няма добавено описание."}</p><div className="moderator-actions"><button disabled={busy} onClick={() => moderateListing(row.id, "active")}>Одобри</button><button disabled={busy} onClick={() => moderateListing(row.id, "archived")}>Отхвърли</button></div></div></article>)}</div> : <p className="account-empty">Няма обяви за преглед.</p>}
+        {pendingListings.length ? <div className="account-list">{pendingListings.map((row) => <article className="account-row moderator-row" key={row.id}><PhotoGallery key={row.id} photo={0} imageUrls={row.imageUrls || []} className="moderator-gallery" /><div><strong>{row.make} {row.model}</strong><small>{row.year} · {number(row.mileage_km)} км · {euro(row.price_eur)} · {row.city}</small><small>Продавач: {row.seller_id}</small><p>{row.details || "Няма добавено описание."}</p><div className="moderator-actions"><button disabled={busy} onClick={() => moderateListing(row.id, "active")}>Одобри</button><button disabled={busy} onClick={() => moderateListing(row.id, "archived")}>Отхвърли</button></div></div></article>)}</div> : <p className="account-empty">Няма обяви за преглед.</p>}
       </section>}
     </main>}
 
