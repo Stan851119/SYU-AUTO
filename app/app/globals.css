@@ -98,6 +98,11 @@ button { cursor: pointer; }
 .back-link { margin-bottom: 19px; }.notice { border: 1px solid #ffd9a6; background: #fff8e8; color: #734b12; padding: 13px 16px; border-radius: 7px; margin-bottom: 20px; font-size: 13px; }
 .detail-layout { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(320px, 1fr); gap: 25px; }
 .detail-photo { height: 500px; border-radius: 12px; }
+.photo-stage { position: relative; }
+.photo-arrow { position: absolute; top: 50%; transform: translateY(-50%); display: grid; place-items: center; width: 46px; height: 46px; border: 0; border-radius: 50%; background: rgba(15, 20, 30, .72); color: #fff; font-size: 38px; line-height: 1; cursor: pointer; }
+.photo-arrow:hover { background: rgba(15, 20, 30, .92); }
+.photo-arrow:focus-visible { outline: 3px solid #e21b2f; outline-offset: 2px; }
+.photo-arrow-prev { left: 12px; }.photo-arrow-next { right: 12px; }
 .photo-thumbnails { display: flex; gap: 8px; overflow-x: auto; padding: 9px 2px 2px; }
 .photo-thumbnails button { flex: 0 0 74px; height: 58px; border: 2px solid transparent; border-radius: 7px; padding: 2px; background: white; cursor: pointer; }
 .photo-thumbnails button.selected { border-color: #d7192d; }
@@ -168,6 +173,7 @@ button { cursor: pointer; }
   .form-grid { grid-template-columns: 1fr; }.post-form { padding: 18px; }.detail-photo { height: 250px; }
   .account-row { grid-template-columns: 100px 1fr; gap: 11px; }.account-row .car-photo { height: 95px; }
   .moderator-row { grid-template-columns: 1fr; }.moderator-row .moderator-gallery .detail-photo { height: 220px; }
+  .photo-arrow { width: 42px; height: 42px; font-size: 34px; }
 }
 @media (max-width: 650px) {
   .assistant-launch { width: 54px; height: 54px; padding: 0; justify-content: center; }
