@@ -25,6 +25,24 @@ export type ListingRow = {
   imageUrls?: string[];
 };
 
+export type InquiryRow = {
+  id: string;
+  listing_id: string;
+  buyer_id: string;
+  contact_email: string;
+  message: string;
+  created_at: string;
+};
+
+export async function loadListingInquiries(listingIds: string[]) {
+  if (!marketplace || !listingIds.length) return [];
+  const { data, error } = await marketplace.from("listing_inquiries")
+    .select("id,listing_id,buyer_id,contact_email,message,created_at")
+    .in("listing_id", listingIds).order("created_at", { ascending: false }).limit(100);
+  if (error) throw error;
+  return (data || []) as InquiryRow[];
+}
+
 async function withImages(rows: ListingRow[]) {
   if (!marketplace) return rows;
   return Promise.all(rows.map(async (row) => {
