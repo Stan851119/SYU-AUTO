@@ -155,10 +155,18 @@ export default function Home() {
     marketplace.auth.getUser().then(({ data }) => { if (active) setUser(data.user); });
     const { data: subscription } = marketplace.auth.onAuthStateChange((_event, session) => setUser(session?.user || null));
     loadActiveListings().then((rows) => {
-      if (active) setLiveCars(rows.map((row) => ({ id: row.id, make: row.make, model: row.model,
+      if (active) {
+        setLiveCars(rows.map((row) => ({ id: row.id, make: row.make, model: row.model,
         title: `${row.make} ${row.model}`, year: row.year, mileage: row.mileage_km, price: row.price_eur,
         fuel: row.fuel, gearbox: row.gearbox, city: row.city, body: row.body,
         photo: 0, imageUrl: row.imageUrl, imageUrls: row.imageUrls, details: row.details, sellerId: row.seller_id })));
+        const returnId = localStorage.getItem("mmc-return-listing");
+        if (returnId && rows.some((row) => row.id === returnId)) {
+          localStorage.removeItem("mmc-return-listing");
+          setSelectedId(returnId);
+          setView("detail");
+        }
+      }
     }).catch(() => { if (active) setListingError("Обявите не могат да се заредят в момента."); });
     return () => { active = false; subscription.subscription.unsubscribe(); };
   }, []);
@@ -226,6 +234,9 @@ export default function Home() {
   async function sendSignIn(event: FormEvent) {
     event.preventDefault();
     if (!marketplace) return;
+    if (view === "detail" && selected && typeof selected.id === "string") {
+      localStorage.setItem("mmc-return-listing", selected.id);
+    }
     setBusy(true); setListingError("");
     const { error } = await marketplace.auth.signInWithOtp({ email: email.trim(),
       options: { emailRedirectTo: window.location.origin } });
@@ -444,7 +455,7 @@ export default function Home() {
     </main>}
 
     {view === "detail" && selected && <main className="page-width interior detail-page"><button className="back-link" onClick={() => navigate("results")}>← Обратно към обявите</button>{notice && <div className="notice">{notice}</div>}<div className="detail-layout"><div><PhotoGallery key={selected.id} photo={selected.photo} imageUrls={selected.imageUrls || (selected.imageUrl ? [selected.imageUrl] : [])} /><p className="photo-note">{selected.draft ? "Черновата използва илюстративна снимка." : marketplace ? selected.imageUrl ? "Снимка, качена от продавача." : "Все още няма добавена снимка." : "Демонстрационна обява · снимката е илюстративна."}</p></div><div className="detail-panel"><span className="section-kicker">{selected.draft ? "ЛОКАЛНА ЧЕРНОВА" : marketplace ? "ОБЯВА" : "ПРИМЕРНА ОБЯВА"}</span><h1>{selected.title}</h1><p className="detail-price">{euro(selected.price)}</p><p className="detail-city"><Icon name="pin" size={17} />{selected.city}</p><div className="spec-grid"><span>Година<strong>{selected.year}</strong></span><span>Пробег<strong>{number(selected.mileage)} км</strong></span><span>Гориво<strong>{selected.fuel}</strong></span><span>Скоростна кутия<strong>{selected.gearbox}</strong></span><span>Купе<strong>{selected.body}</strong></span></div><button className="primary-button wide" onClick={() => toggleFavorite(selected.id)}><Icon name="heart" size={19} fill={favorites.includes(selected.id) ? "currentColor" : "none"} />{favorites.includes(selected.id) ? "Запазено в любими" : "Запази в любими"}</button><button className="compare-detail-button" onClick={() => toggleCompare(selected.id)} aria-pressed={compareIds.includes(selected.id)}>{compareIds.includes(selected.id) ? "✓ Добавена за сравнение" : "+ Добави за сравнение"}</button>{selected.details && <p className="detail-description">{selected.details}</p>}{marketplace && !selected.draft && <section className="inquiry-panel"><h2>Попитай продавача</h2>
-        {!user ? <><p>Влез с имейл, за да изпратиш запитване. След вход отвори обявата отново.</p><button className="primary-button" onClick={() => navigate("post")}>Вход с имейл</button></>
+        {!user ? <form onSubmit={sendSignIn}><p>Влез с имейл, за да изпратиш запитване. След вход ще се върнеш към тази обява.</p><label>Имейл<input type="email" required value={email} onChange={(event) => setEmail(event.target.value)} placeholder="name@example.com" /></label><button className="primary-button" disabled={busy}>{busy ? "Изпращане…" : "Изпрати линк за вход"}</button></form>
         : user.id === selected.sellerId ? <p>Това е твоята обява.</p>
         : sentInquiryIds.includes(String(selected.id)) ? <p>Вече си изпратил запитване за тази обява.</p>
         : <form onSubmit={sendInquiry}><label>Съобщение до продавача<textarea required minLength={10} maxLength={2000} rows={4} value={inquiryMessage} onChange={(event) => setInquiryMessage(event.target.value)} placeholder="Здравейте, автомобилът още ли е наличен?" /></label><p>Имейлът ти ({user.email}) ще бъде показан на продавача, за да може да ти отговори.</p><button className="primary-button" type="submit" disabled={busy}>{busy ? "Изпращане…" : "Изпрати запитване"}</button></form>}
