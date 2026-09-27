@@ -182,7 +182,7 @@ export default function Home() {
     (!filters.body || car.body === filters.body) &&
     (!filters.year || car.year >= Number(filters.year)) &&
     (!filters.gearbox || car.gearbox === filters.gearbox)
-  ).sort((a, b) => sort === "priceAsc" ? a.price - b.price : sort === "priceDesc" ? b.price - a.price : b.year - a.year), [cars, filters, sort]);
+  ).sort((a, b) => sort === "priceAsc" ? a.price - b.price : sort === "priceDesc" ? b.price - a.price : 0), [cars, filters, sort]);
 
   const selected = cars.find((car) => car.id === selectedId) || cars[0];
   const shownCars = view === "favorites" ? cars.filter((car) => favorites.includes(car.id)) : matches;
