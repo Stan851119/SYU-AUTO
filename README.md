@@ -1,2 +1,3 @@
-# SYU-AUTO
-SYUAUTO
+# MMC Auto
+
+Автомобилни обяви в България.
