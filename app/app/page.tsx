@@ -248,14 +248,25 @@ export default function Home() {
     event.preventDefault();
     if (!marketplace || !user?.email || !selected || typeof selected.id !== "string" || busy) return;
     setBusy(true); setInquiryNotice("");
-    const { error } = await marketplace.from("listing_inquiries").insert({
+    const { data, error } = await marketplace.from("listing_inquiries").insert({
       listing_id: selected.id, buyer_id: user.id, contact_email: user.email, message: inquiryMessage.trim(),
-    });
+    }).select("id").single();
     if (error) setInquiryNotice(error.code === "23505" ? "Вече си изпратил запитване за тази обява." : "Не успяхме да изпратим запитването. Опитай отново.");
     else {
       setSentInquiryIds((old) => [...old, selected.id as string]);
       setInquiryMessage("");
-      setInquiryNotice("Запитването е изпратено. Продавачът ще го види в профила си.");
+      let notificationError = true;
+      try {
+        const result = await marketplace.functions.invoke("notify-listing-inquiry", {
+          body: { inquiryId: data.id },
+        });
+        notificationError = Boolean(result.error);
+      } catch {
+        notificationError = true;
+      }
+      setInquiryNotice(notificationError
+        ? "Запитването е изпратено и се вижда при продавача. Известието по имейл не успя да се изпрати."
+        : "Запитването е изпратено. Продавачът ще го види в профила си и ще получи имейл.");
     }
     setBusy(false);
   }
