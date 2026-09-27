@@ -22,14 +22,18 @@ export type ListingRow = {
   photo_paths: string[];
   status: "draft" | "pending" | "active" | "archived";
   imageUrl?: string;
+  imageUrls?: string[];
 };
 
 async function withImages(rows: ListingRow[]) {
   if (!marketplace) return rows;
   return Promise.all(rows.map(async (row) => {
-    const path = row.photo_paths[0];
-    const signed = path ? await marketplace.storage.from("car-photos").createSignedUrl(path, 3600) : null;
-    return { ...row, imageUrl: signed?.data?.signedUrl || undefined };
+    const signed = await Promise.all(row.photo_paths.map(async (path) => {
+      const { data } = await marketplace.storage.from("car-photos").createSignedUrl(path, 3600);
+      return data?.signedUrl;
+    }));
+    const imageUrls = signed.filter((url): url is string => !!url);
+    return { ...row, imageUrl: imageUrls[0], imageUrls };
   }));
 }
 
