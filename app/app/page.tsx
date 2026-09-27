@@ -271,7 +271,7 @@ export default function Home() {
       options: { emailRedirectTo: window.location.origin } });
     setBusy(false);
     setNotice(error ? `Не успяхме да изпратим линк: ${error.message}` : "Изпратихме линк за вход на посочения имейл.");
-  }
+  
 
   async function sendInquiry(event: FormEvent) {
     event.preventDefault();
