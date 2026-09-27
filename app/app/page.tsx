@@ -69,7 +69,15 @@ function PhotoGallery({ photo, imageUrls = [], className = "" }: { photo: number
   const [selectedIndex, setSelectedIndex] = useState(0);
   const selected = imageUrls[selectedIndex] || imageUrls[0];
   return <div className={`photo-gallery ${className}`}>
-    <CarPhoto photo={photo} imageUrl={selected} className="detail-photo" />
+    <div className="photo-stage">
+      <CarPhoto photo={photo} imageUrl={selected} className="detail-photo" />
+      {imageUrls.length > 1 && <>
+        <button className="photo-arrow photo-arrow-prev" type="button" aria-label="Предишна снимка"
+          onClick={() => setSelectedIndex((index) => (index - 1 + imageUrls.length) % imageUrls.length)}>‹</button>
+        <button className="photo-arrow photo-arrow-next" type="button" aria-label="Следваща снимка"
+          onClick={() => setSelectedIndex((index) => (index + 1) % imageUrls.length)}>›</button>
+      </>}
+    </div>
     {imageUrls.length > 1 && <div className="photo-thumbnails" aria-label="Снимки на автомобила">
       {imageUrls.map((url, index) => <button key={index} type="button" className={selectedIndex === index ? "selected" : ""}
         onClick={() => setSelectedIndex(index)} aria-label={`Покажи снимка ${index + 1} от ${imageUrls.length}`} aria-pressed={selectedIndex === index}>
