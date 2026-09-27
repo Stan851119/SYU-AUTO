@@ -6,8 +6,14 @@ alter table public.car_listings
     check (co2_g_km between 0 and 1000);
 
 -- Electric vehicles have zero tailpipe CO2; Euro classes belong to combustion vehicles.
-alter table public.car_listings
-  add constraint electric_zero_tailpipe_emissions
-    check (fuel <> 'Електрически' or (emission_class is not distinct from 'Нулеви емисии' and co2_g_km is not distinct from 0)),
-  add constraint zero_emissions_only_electric
-    check (emission_class is distinct from 'Нулеви емисии' or fuel = 'Електрически');
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conrelid = 'public.car_listings'::regclass and conname = 'electric_zero_tailpipe_emissions') then
+    alter table public.car_listings add constraint electric_zero_tailpipe_emissions
+      check (fuel <> 'Електрически' or (emission_class is not distinct from 'Нулеви емисии' and co2_g_km is not distinct from 0));
+  end if;
+  if not exists (select 1 from pg_constraint where conrelid = 'public.car_listings'::regclass and conname = 'zero_emissions_only_electric') then
+    alter table public.car_listings add constraint zero_emissions_only_electric
+      check (emission_class is distinct from 'Нулеви емисии' or fuel = 'Електрически');
+  end if;
+end $$;
