@@ -88,6 +88,35 @@ function PhotoGallery({ photo, imageUrls = [], className = "" }: { photo: number
   </div>;
 }
 
+function PriceGuide({ car, catalog, demo }: { car: Car; catalog: Car[]; demo: boolean }) {
+  const comparable = catalog.filter((item) => item.id !== car.id &&
+    item.make.trim().toLocaleLowerCase("bg") === car.make.trim().toLocaleLowerCase("bg") &&
+    item.model.trim().toLocaleLowerCase("bg") === car.model.trim().toLocaleLowerCase("bg") &&
+    item.fuel === car.fuel && item.gearbox === car.gearbox &&
+    Math.abs(item.year - car.year) <= 3 && Math.abs(item.mileage - car.mileage) <= 60_000);
+  const guide = estimateCar({ make: car.make, model: car.model, year: car.year,
+    mileage: car.mileage, exterior: "normal" }, comparable, false);
+  if (!guide) return <section className="price-guide" aria-label="Ориентир за цената">
+    <strong>Ориентир за цената</strong>
+    <p>Ще покажем сравнение, когато има поне 3 сходни обяви за този модел.</p>
+  </section>;
+  const ratio = car.price / guide.mid;
+  const level = ratio < 0.9 ? "Ниска спрямо ориентира" : ratio > 1.1 ? "Висока спрямо ориентира" : "Близка до ориентира";
+  const color = ratio < 0.9 ? "#166534" : ratio > 1.1 ? "#9f1239" : "#805800";
+  const position = Math.max(3, Math.min(97, 50 + (ratio - 1) * 125));
+  return <section className="price-guide" aria-label="Ориентир за цената">
+    <strong>Ориентир за цената</strong>
+    <div className="price-guide-heading"><span style={{ color }}>{level}</span><b>{euro(car.price)}</b></div>
+    <div className="price-guide-meter" role="img" aria-label={level}>
+      <div className="price-guide-bands"><span /><span /><span /></div>
+      <span className="price-guide-marker" style={{ left: `${position}%` }} />
+    </div>
+    <div className="price-guide-labels"><span>Ниска</span><span>Средна</span><span>Висока</span></div>
+    <p>Ориентир: {euro(guide.mid)} · приблизителен диапазон {euro(guide.low)} – {euro(guide.high)}.</p>
+    <small>Сравнени са {guide.count} {demo ? "примерни" : "активни"} обяви за същия модел, гориво и скоростна кутия с близки година и пробег. Това са обявени, а не продажни цени; оборудването и техническото състояние не са отчетени.</small>
+  </section>;
+}
+
 export default function Home() {
   const [view, setView] = useState<View>("home");
   const [filters, setFilters] = useState<Filters>(initialFilters);
@@ -454,7 +483,7 @@ export default function Home() {
       {shownCars.length ? <div className="cards-grid results-grid">{shownCars.map((car) => <CarCard car={car} key={car.id} />)}</div> : <div className="empty-state"><Icon name={view === "favorites" ? "heart" : "search"} size={38} /><h2>{view === "favorites" ? "Още нямаш любими обяви" : "Няма съвпадения"}</h2><p>{view === "favorites" ? "Натисни сърцето на автомобил, който ти харесва." : "Промени някой от филтрите, за да видиш повече автомобили."}</p><button className="primary-button" onClick={() => { setFilters(initialFilters); navigate("results"); }}>Разгледай обявите</button></div>}
     </main>}
 
-    {view === "detail" && selected && <main className="page-width interior detail-page"><button className="back-link" onClick={() => navigate("results")}>← Обратно към обявите</button>{notice && <div className="notice">{notice}</div>}<div className="detail-layout"><div><PhotoGallery key={selected.id} photo={selected.photo} imageUrls={selected.imageUrls || (selected.imageUrl ? [selected.imageUrl] : [])} /><p className="photo-note">{selected.draft ? "Черновата използва илюстративна снимка." : marketplace ? selected.imageUrl ? "Снимка, качена от продавача." : "Все още няма добавена снимка." : "Демонстрационна обява · снимката е илюстративна."}</p></div><div className="detail-panel"><span className="section-kicker">{selected.draft ? "ЛОКАЛНА ЧЕРНОВА" : marketplace ? "ОБЯВА" : "ПРИМЕРНА ОБЯВА"}</span><h1>{selected.title}</h1><p className="detail-price">{euro(selected.price)}</p><p className="detail-city"><Icon name="pin" size={17} />{selected.city}</p><div className="spec-grid"><span>Година<strong>{selected.year}</strong></span><span>Пробег<strong>{number(selected.mileage)} км</strong></span><span>Гориво<strong>{selected.fuel}</strong></span><span>Скоростна кутия<strong>{selected.gearbox}</strong></span><span>Купе<strong>{selected.body}</strong></span></div><button className="primary-button wide" onClick={() => toggleFavorite(selected.id)}><Icon name="heart" size={19} fill={favorites.includes(selected.id) ? "currentColor" : "none"} />{favorites.includes(selected.id) ? "Запазено в любими" : "Запази в любими"}</button><button className="compare-detail-button" onClick={() => toggleCompare(selected.id)} aria-pressed={compareIds.includes(selected.id)}>{compareIds.includes(selected.id) ? "✓ Добавена за сравнение" : "+ Добави за сравнение"}</button>{selected.details && <p className="detail-description">{selected.details}</p>}{marketplace && !selected.draft && <section className="inquiry-panel"><h2>Попитай продавача</h2>
+    {view === "detail" && selected && <main className="page-width interior detail-page"><button className="back-link" onClick={() => navigate("results")}>← Обратно към обявите</button>{notice && <div className="notice">{notice}</div>}<div className="detail-layout"><div><PhotoGallery key={selected.id} photo={selected.photo} imageUrls={selected.imageUrls || (selected.imageUrl ? [selected.imageUrl] : [])} /><p className="photo-note">{selected.draft ? "Черновата използва илюстративна снимка." : marketplace ? selected.imageUrl ? "Снимка, качена от продавача." : "Все още няма добавена снимка." : "Демонстрационна обява · снимката е илюстративна."}</p></div><div className="detail-panel"><span className="section-kicker">{selected.draft ? "ЛОКАЛНА ЧЕРНОВА" : marketplace ? "ОБЯВА" : "ПРИМЕРНА ОБЯВА"}</span><h1>{selected.title}</h1><p className="detail-price">{euro(selected.price)}</p><p className="detail-city"><Icon name="pin" size={17} />{selected.city}</p><PriceGuide car={selected} catalog={cars} demo={!marketplace} /><div className="spec-grid"><span>Година<strong>{selected.year}</strong></span><span>Пробег<strong>{number(selected.mileage)} км</strong></span><span>Гориво<strong>{selected.fuel}</strong></span><span>Скоростна кутия<strong>{selected.gearbox}</strong></span><span>Купе<strong>{selected.body}</strong></span></div><button className="primary-button wide" onClick={() => toggleFavorite(selected.id)}><Icon name="heart" size={19} fill={favorites.includes(selected.id) ? "currentColor" : "none"} />{favorites.includes(selected.id) ? "Запазено в любими" : "Запази в любими"}</button><button className="compare-detail-button" onClick={() => toggleCompare(selected.id)} aria-pressed={compareIds.includes(selected.id)}>{compareIds.includes(selected.id) ? "✓ Добавена за сравнение" : "+ Добави за сравнение"}</button>{selected.details && <p className="detail-description">{selected.details}</p>}{marketplace && !selected.draft && <section className="inquiry-panel"><h2>Попитай продавача</h2>
         {!user ? <form onSubmit={sendSignIn}><p>Влез с имейл, за да изпратиш запитване. След вход ще се върнеш към тази обява.</p><label>Имейл<input type="email" required value={email} onChange={(event) => setEmail(event.target.value)} placeholder="name@example.com" /></label><button className="primary-button" disabled={busy}>{busy ? "Изпращане…" : "Изпрати линк за вход"}</button></form>
         : user.id === selected.sellerId ? <p>Това е твоята обява.</p>
         : sentInquiryIds.includes(String(selected.id)) ? <p>Вече си изпратил запитване за тази обява.</p>
