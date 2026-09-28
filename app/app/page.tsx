@@ -45,6 +45,26 @@ const demoCars: Car[] = [
   { id: 6, make: "Mazda", model: "MX-5", title: "Mazda MX-5 Roadster", year: 2019, mileage: 48000, price: 22900, fuel: "Бензин", gearbox: "Ръчна", city: "Бургас", body: "Кабрио", photo: 5 },
 ];
 const categories = ["Хечбек", "Седан", "Комби", "SUV / Джип", "Купе", "Кабрио", "Бусове"];
+const categoryProfiles: Record<string, { outline: string; windows: string; wheels?: [number, number] }> = {
+  "Хечбек": { outline: "M11 52 L16 43 L36 40 L50 25 Q54 21 64 21 L103 21 Q113 21 119 30 L129 43 L157 47 Q166 48 168 55 L168 60 L12 60 Z", windows: "M39 41 L53 28 Q56 25 64 25 L99 25 L99 41 Z M104 25 Q112 26 116 32 L122 41 L104 41 Z" },
+  "Седан": { outline: "M10 53 L16 45 L35 42 L53 27 Q58 22 68 22 L109 22 Q119 22 126 29 L139 42 L161 46 Q169 48 170 55 L170 60 L10 60 Z", windows: "M39 42 L56 30 Q60 26 68 26 L90 26 L90 42 Z M95 26 L109 26 Q118 26 123 33 L132 42 L95 42 Z" },
+  "Комби": { outline: "M10 54 L15 46 L28 43 L34 25 Q36 21 45 21 L119 21 Q126 21 130 29 L137 43 L160 47 Q168 49 170 55 L170 60 L10 60 Z", windows: "M31 43 L38 27 Q40 25 46 25 L89 25 L89 43 Z M94 25 L117 25 Q124 25 127 32 L132 43 L94 43 Z" },
+  "SUV / Джип": { outline: "M10 53 L14 46 L27 43 L34 22 Q36 18 43 18 L119 18 Q125 18 131 25 L141 43 L161 47 Q169 49 170 56 L170 62 L10 62 Z", windows: "M30 43 L38 25 Q40 22 46 22 L91 22 L91 43 Z M96 22 L117 22 Q124 22 128 29 L135 43 L96 43 Z", wheels: [43, 139] },
+  "Купе": { outline: "M9 54 L18 47 L43 44 Q64 21 88 22 Q111 22 132 44 L159 47 Q168 49 170 55 L170 60 L10 60 Z", windows: "M48 44 Q66 27 86 26 L90 26 L90 44 Z M95 26 Q112 29 126 44 L95 44 Z" },
+  "Кабрио": { outline: "M9 53 L18 46 L58 43 L69 28 L73 28 L77 43 L135 43 L160 47 Q169 49 170 55 L170 60 L10 60 Z", windows: "M62 42 L70 31 L73 42 M80 43 L127 43" },
+  "Бусове": { outline: "M10 54 L15 45 L20 22 Q21 15 29 15 L118 15 Q126 15 130 23 L139 45 L161 48 Q169 49 170 55 L170 62 L10 62 Z", windows: "M25 42 L25 23 Q25 20 31 20 L85 20 L85 42 Z M91 20 L116 20 Q123 20 127 27 L134 42 L91 42 Z", wheels: [42, 141] },
+};
+
+function CategoryCar({ category }: { category: string }) {
+  const profile = categoryProfiles[category];
+  const [rearWheel, frontWheel] = profile.wheels || [42, 139];
+  return <svg className="category-car" viewBox="0 0 180 80" fill="none" aria-hidden="true" focusable="false">
+    <path d={profile.outline} fill="#eef1f5" stroke="#18232f" strokeWidth="2.6" strokeLinejoin="round" />
+    <path d={profile.windows} stroke="#657181" strokeWidth="2" strokeLinejoin="round" />
+    <path d="M16 52 H26 M153 52 H165" stroke="#e41b31" strokeWidth="3" strokeLinecap="round" />
+    {[rearWheel, frontWheel].map((x) => <g key={x}><circle cx={x} cy="60" r="9" fill="#18232f" /><circle cx={x} cy="60" r="4" fill="#f7f8fb" /></g>)}
+  </svg>;
+}
 const euro = (n: number) => new Intl.NumberFormat("bg-BG").format(n) + " €";
 const number = (n: number) => new Intl.NumberFormat("bg-BG").format(n);
 const exteriorLabels: Record<Exterior, string> = { excellent: "Без забележки", normal: "Нормални следи от употреба", scratches: "Леки драскотини", dents: "Видими драскотини или вдлъбнатини", damage: "Сериозни външни забележки" };
@@ -493,7 +513,7 @@ export default function Home() {
       <div className="home-search page-width" id="search">{SearchForm()}</div>
       <main className="page-width home-content">
         <div className="section-head"><div><span className="section-kicker">РАЗГЛЕДАЙ ПАЗАРА</span><h2>Търси по категория</h2></div><button className="text-link" onClick={() => { setFilters(initialFilters); navigate("results"); }}>Всички обяви <Icon name="arrow" size={17} /></button></div>
-        <div className="category-grid">{categories.map((category, index) => <button key={category} className="category-tile" onClick={() => categorySearch(category)}><span className={`category-image photo-${[3,0,2,4,5,5,4][index]}`} /><span>{category}</span><Icon name="arrow" size={16} /></button>)}</div>
+        <div className="category-grid">{categories.map((category) => <button key={category} className="category-tile" onClick={() => categorySearch(category)}><span className="category-image"><CategoryCar category={category} /></span><span>{category}</span><Icon name="arrow" size={16} /></button>)}</div>
         <section className="valuation-promo"><div><span className="section-kicker">НОВО В MMC AUTO</span><h2>Колко струва твоята кола?</h2><p>Въведи година, пробег и външни забележки за ориентировъчен диапазон.</p></div><button className="primary-button" onClick={() => navigate("valuation")}>Оцени кола <Icon name="arrow" size={17} /></button></section>
         <div className="section-head listings-head"><div><span className="section-kicker">ПЪРВА ВЕРСИЯ</span><h2>{marketplace ? "Последни обяви" : "Примерни обяви"}</h2><p>{marketplace ? "Обявите се показват след преглед." : "Данните и снимките тук са демонстрационни."}</p></div><button className="text-link" onClick={() => { setFilters(initialFilters); navigate("results"); }}>Виж всички <Icon name="arrow" size={17} /></button></div>
         {cars.length ? <div className="cards-grid">{cars.slice(0, 4).map((car) => <CarCard car={car} key={car.id} />)}</div> : <div className="empty-state"><Icon name="car" size={36} /><h2>Очакваме първите обяви</h2><p>Публикуваните след преглед автомобили ще се появят тук.</p></div>}
