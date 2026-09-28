@@ -131,6 +131,16 @@ button { cursor: pointer; }
 .detail-panel h1 { margin: 10px 0 5px; font-size: 31px; }
 .detail-price { color: #df1b2e; font-size: 29px; font-weight: 850; margin: 15px 0; }
 .detail-city { display: flex; align-items: center; gap: 5px; color: #636d7b; font-size: 13px; }
+.seller-contact { margin-top: 22px; padding: 20px; border: 1px solid #e4e8ed; border-radius: 12px; background: #fafbfc; }
+.seller-contact h2 { margin: 0 0 14px; font-size: 19px; color: #1d2939; }
+.seller-contact p { margin: 10px 0 0; color: #667080; font-size: 12px; line-height: 1.5; }
+.seller-contact-actions { display: flex; gap: 10px; }
+.seller-contact-actions a, .seller-contact-actions button { min-height: 48px; flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 9px; border-radius: 24px; text-decoration: none; font: inherit; font-size: 14px; font-weight: 750; cursor: pointer; }
+.seller-contact-call { color: #fff; background: #df1b2e; border: 2px solid #df1b2e; }
+.seller-contact-call:hover { background: #c61527; }
+.seller-contact-message { color: #d7192d; background: #fff; border: 2px solid #d7192d; }
+.seller-contact-message:hover { background: #fff3f4; }
+.seller-contact-dock { display: none; }
 .price-guide { margin-top: 18px; border: 1px solid #e2e7ec; border-radius: 11px; padding: 18px; background: #f8fafc; }
 .price-guide > strong { display: block; font-size: 15px; color: #243040; }
 .price-guide-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; font-size: 14px; font-weight: 750; }
@@ -147,6 +157,7 @@ button { cursor: pointer; }
 .wide { width: 100%; margin-top: 27px; }.detail-hint { margin-top: 13px; font-size: 12px; line-height: 1.45; color: #7c8591; }
 .compare-detail-button { width: 100%; margin-top: 10px; padding: 12px; border: 1px solid #d8dee7; border-radius: 6px; background: #fff; font-size: 13px; font-weight: 750; }
 .inquiry-panel { border-top: 1px solid #e8eaf0; margin-top: 22px; padding-top: 20px; }
+.inquiry-panel { scroll-margin-bottom: 110px; }
 .inquiry-panel h2 { font-size: 20px; margin: 0 0 12px; }
 .inquiry-panel p { font-size: 14px; line-height: 1.5; color: #596473; }
 .inquiry-panel label { display: grid; gap: 8px; font-size: 14px; font-weight: 700; }
@@ -154,6 +165,7 @@ button { cursor: pointer; }
 .inquiry-panel input { width: 100%; padding: 11px; border: 1px solid #cdd3dc; border-radius: 6px; font: inherit; font-size: 16px; }
 .inquiry-panel .primary-button { margin-top: 8px; }
 .inquiry-notice { color: #243951 !important; font-weight: 700; }
+.form-grid label small { display: block; margin-top: 6px; color: #687383; font-size: 11px; line-height: 1.4; font-weight: 400; }
 .inbox { margin-top: 30px; border-top: 1px solid #e3e7ed; padding-top: 24px; }
 .inbox h3 { margin: 0; font-size: 19px; }
 .inbox-list { display: grid; gap: 12px; margin-top: 17px; }
@@ -224,6 +236,11 @@ button { cursor: pointer; }
   .photo-arrow { width: 42px; height: 42px; font-size: 34px; }
 }
 @media (max-width: 650px) {
+  .detail-page:has(.seller-contact-dock) { padding-bottom: 120px; }
+  .seller-contact-dock { position: fixed; z-index: 45; display: block; bottom: 0; left: 0; right: 0; padding: 12px 14px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid #e6e8ec; background: #fff; box-shadow: 0 -5px 18px #1118271a; }
+  .seller-contact-dock .seller-contact-actions a, .seller-contact-dock .seller-contact-actions button { min-height: 52px; }
+  .site-shell:has(.seller-contact-dock) .assistant-launch { bottom: calc(90px + env(safe-area-inset-bottom)); }
+  .site-shell:has(.seller-contact-dock) .assistant-panel { bottom: calc(150px + env(safe-area-inset-bottom)); }
   .assistant-launch { width: 54px; height: 54px; padding: 0; justify-content: center; }
   .assistant-launch span { display: none; }
 }

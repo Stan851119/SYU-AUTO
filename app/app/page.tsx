@@ -27,6 +27,7 @@ type Car = {
   imageUrls?: string[];
   details?: string;
   sellerId?: string;
+  contactPhone?: string | null;
 };
 
 type View = "home" | "results" | "detail" | "favorites" | "post" | "valuation" | "compare";
@@ -74,6 +75,8 @@ function Icon({ name, size = 20, fill = "none" }: { name: string; size?: number;
     close: <path d="M5 5 19 19M19 5 5 19" />,
     chevron: <path d="m7 10 5 5 5-5" />,
     spark: <><path d="m12 2 1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8L12 2ZM19 17l.7 1.3L21 19l-1.3.7L19 21l-.7-1.3L17 19l1.3-.7L19 17Z" /></>,
+    phone: <path d="M7 3H4a2 2 0 0 0-2 2c0 9.4 7.6 17 17 17a2 2 0 0 0 2-2v-3l-5-2-2 2a14 14 0 0 1-7-7l2-2-2-5Z" />,
+    message: <><rect x="2" y="4" width="20" height="16" rx="2" /><path d="m3 6 9 7 9-7" /></>,
   };
   return <svg width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
 }
@@ -166,7 +169,7 @@ export default function Home() {
   useEffect(() => { if (!filters.originCity && sort === "distanceAsc") setSort("newest"); }, [filters.originCity, sort]);
   const [mobileMenu, setMobileMenu] = useState(false);
   const [notice, setNotice] = useState("");
-  const [draftForm, setDraftForm] = useState({ make: "", model: "", year: "", mileage: "", price: "", fuel: "Бензин", gearbox: "Ръчна", emissionClass: "", co2GKm: "", city: "", body: "Седан", details: "" });
+  const [draftForm, setDraftForm] = useState({ make: "", model: "", year: "", mileage: "", price: "", fuel: "Бензин", gearbox: "Ръчна", emissionClass: "", co2GKm: "", city: "", body: "Седан", details: "", contactPhone: "" });
 
   useEffect(() => {
     try {
@@ -205,7 +208,7 @@ export default function Home() {
         setLiveCars(rows.map((row) => ({ id: row.id, make: row.make, model: row.model,
         title: `${row.make} ${row.model}`, year: row.year, mileage: row.mileage_km, price: row.price_eur,
         fuel: row.fuel, gearbox: row.gearbox, emissionClass: row.emission_class, co2GKm: row.co2_g_km, city: row.city, body: row.body,
-        photo: 0, imageUrl: row.imageUrl, imageUrls: row.imageUrls, details: row.details, sellerId: row.seller_id })));
+        photo: 0, imageUrl: row.imageUrl, imageUrls: row.imageUrls, details: row.details, sellerId: row.seller_id, contactPhone: row.contact_phone })));
         const returnId = localStorage.getItem("mmc-return-listing");
         if (returnId && rows.some((row) => row.id === returnId)) {
           localStorage.removeItem("mmc-return-listing");
@@ -313,6 +316,12 @@ export default function Home() {
   async function saveLiveListing(event: FormEvent) {
     event.preventDefault();
     if (!marketplace || !user || busy) return;
+    const enteredPhone = draftForm.contactPhone.replace(/[\s()-]/g, "");
+    const contactPhone = enteredPhone.startsWith("0") ? `+359${enteredPhone.slice(1)}` : enteredPhone;
+    if (contactPhone && !/^\+[1-9][0-9]{7,14}$/.test(contactPhone)) {
+      setListingError("Въведи телефон с международен код, например +359 87 123 4567, или остави полето празно.");
+      return;
+    }
     setBusy(true); setListingError(""); setNotice("");
     try {
       const { data, error } = await marketplace.from("car_listings").insert({
@@ -321,7 +330,7 @@ export default function Home() {
         fuel: draftForm.fuel, gearbox: draftForm.gearbox,
         emission_class: draftForm.fuel === "Електрически" ? zeroEmissions : draftForm.emissionClass || null,
         co2_g_km: draftForm.fuel === "Електрически" ? 0 : draftForm.co2GKm === "" ? null : Number(draftForm.co2GKm),
-        city: draftForm.city.trim(), body: draftForm.body,
+        city: draftForm.city.trim(), body: draftForm.body, contact_phone: contactPhone || null,
         details: draftForm.details.trim(), status: "draft"
       }).select("id").single();
       if (error || !data) throw error || new Error("Обявата не е запазена.");
@@ -336,7 +345,7 @@ export default function Home() {
       const updated = await marketplace.from("car_listings").update({ photo_paths: paths, status: "pending" }).eq("id", data.id).select("id").single();
       if (updated.error) throw updated.error;
       setPhotos([]);
-      setDraftForm({ make: "", model: "", year: "", mileage: "", price: "", fuel: "Бензин", gearbox: "Ръчна", emissionClass: "", co2GKm: "", city: "", body: "Седан", details: "" });
+      setDraftForm({ make: "", model: "", year: "", mileage: "", price: "", fuel: "Бензин", gearbox: "Ръчна", emissionClass: "", co2GKm: "", city: "", body: "Седан", details: "", contactPhone: "" });
       try { setMyListings(await loadMyListings(user.id)); }
       catch { setListingError("Обявата е изпратена, но списъкът в профила не се обнови. Презареди страницата."); }
       setNotice("Обявата е изпратена за преглед. Ще се вижда публично след одобрение.");
@@ -358,7 +367,7 @@ export default function Home() {
           setLiveCars(rows.map((row) => ({ id: row.id, make: row.make, model: row.model,
             title: `${row.make} ${row.model}`, year: row.year, mileage: row.mileage_km, price: row.price_eur,
             fuel: row.fuel, gearbox: row.gearbox, emissionClass: row.emission_class, co2GKm: row.co2_g_km, city: row.city, body: row.body,
-            photo: 0, imageUrl: row.imageUrl, imageUrls: row.imageUrls, details: row.details, sellerId: row.seller_id })));
+            photo: 0, imageUrl: row.imageUrl, imageUrls: row.imageUrls, details: row.details, sellerId: row.seller_id, contactPhone: row.contact_phone })));
         } catch { setListingError("Обявата е одобрена, но каталогът не се обнови. Презареди страницата."); }
       }
       setNotice(status === "active" ? "Обявата е одобрена и вече е публична." : "Обявата е отхвърлена.");
@@ -475,6 +484,13 @@ export default function Home() {
     </article>;
   }
 
+  function SellerContactActions({ car }: { car: Car }) {
+    return <div className="seller-contact-actions">
+      {car.contactPhone && <a className="seller-contact-call" href={`tel:${car.contactPhone}`}><Icon name="phone" size={19} /> Обади се</a>}
+      <button type="button" className="seller-contact-message" onClick={() => document.getElementById("seller-message")?.scrollIntoView({ behavior: "smooth", block: "center" })}><Icon name="message" size={19} /> Съобщение</button>
+    </div>;
+  }
+
   return <div className="site-shell">
     <header className="site-header">
       <div className="header-inner">
@@ -526,13 +542,13 @@ export default function Home() {
       {shownCars.length ? <div className="cards-grid results-grid">{shownCars.map((car) => <CarCard car={car} key={car.id} />)}</div> : <div className="empty-state"><Icon name={view === "favorites" ? "heart" : "search"} size={38} /><h2>{view === "favorites" ? "Още нямаш любими обяви" : "Няма съвпадения"}</h2><p>{view === "favorites" ? "Натисни сърцето на автомобил, който ти харесва." : "Промени някой от филтрите, за да видиш повече автомобили."}</p><button className="primary-button" onClick={() => { setFilters(initialFilters); navigate("results"); }}>Разгледай обявите</button></div>}
     </main>}
 
-    {view === "detail" && selected && <main className="page-width interior detail-page"><button className="back-link" onClick={() => navigate("results")}>← Обратно към обявите</button>{notice && <div className="notice">{notice}</div>}<div className="detail-layout"><div><PhotoGallery key={selected.id} photo={selected.photo} imageUrls={selected.imageUrls || (selected.imageUrl ? [selected.imageUrl] : [])} /><p className="photo-note">{selected.draft ? "Черновата използва илюстративна снимка." : marketplace ? selected.imageUrl ? "Снимка, качена от продавача." : "Все още няма добавена снимка." : "Демонстрационна обява · снимката е илюстративна."}</p></div><div className="detail-panel"><span className="section-kicker">{selected.draft ? "ЛОКАЛНА ЧЕРНОВА" : marketplace ? "ОБЯВА" : "ПРИМЕРНА ОБЯВА"}</span><h1>{selected.title}</h1><p className="detail-price">{euro(selected.price)}</p><p className="detail-city"><Icon name="pin" size={17} />{selected.city}</p><PriceGuide car={selected} catalog={cars} demo={!marketplace} /><div className="spec-grid"><span>Година<strong>{selected.year}</strong></span><span>Пробег<strong>{number(selected.mileage)} км</strong></span><span>Гориво<strong>{selected.fuel}</strong></span><span>Скоростна кутия<strong>{selected.gearbox}</strong></span><span>Купе<strong>{selected.body}</strong></span><span>Екологична категория<strong>{emissionClassOf(selected) || "Не е посочена"}</strong></span><span>CO₂<strong>{co2Of(selected) == null ? "Не е посочено" : `${co2Of(selected)} г/км`}</strong></span></div><button className="primary-button wide" onClick={() => toggleFavorite(selected.id)}><Icon name="heart" size={19} fill={favorites.includes(selected.id) ? "currentColor" : "none"} />{favorites.includes(selected.id) ? "Запазено в любими" : "Запази в любими"}</button><button className="compare-detail-button" onClick={() => toggleCompare(selected.id)} aria-pressed={compareIds.includes(selected.id)}>{compareIds.includes(selected.id) ? "✓ Добавена за сравнение" : "+ Добави за сравнение"}</button>{selected.details && <p className="detail-description">{selected.details}</p>}{marketplace && !selected.draft && <section className="inquiry-panel"><h2>Попитай продавача</h2>
+    {view === "detail" && selected && <main className="page-width interior detail-page"><button className="back-link" onClick={() => navigate("results")}>← Обратно към обявите</button>{notice && <div className="notice">{notice}</div>}<div className="detail-layout"><div><PhotoGallery key={selected.id} photo={selected.photo} imageUrls={selected.imageUrls || (selected.imageUrl ? [selected.imageUrl] : [])} /><p className="photo-note">{selected.draft ? "Черновата използва илюстративна снимка." : marketplace ? selected.imageUrl ? "Снимка, качена от продавача." : "Все още няма добавена снимка." : "Демонстрационна обява · снимката е илюстративна."}</p></div><div className="detail-panel"><span className="section-kicker">{selected.draft ? "ЛОКАЛНА ЧЕРНОВА" : marketplace ? "ОБЯВА" : "ПРИМЕРНА ОБЯВА"}</span><h1>{selected.title}</h1><p className="detail-price">{euro(selected.price)}</p><p className="detail-city"><Icon name="pin" size={17} />{selected.city}</p>{marketplace && !selected.draft && (!user || user.id !== selected.sellerId) && <section className="seller-contact"><h2>Връзка с продавача</h2><SellerContactActions car={selected} />{!selected.contactPhone && <p>Продавачът не е посочил телефон. Изпрати му съобщение.</p>}</section>}<PriceGuide car={selected} catalog={cars} demo={!marketplace} /><div className="spec-grid"><span>Година<strong>{selected.year}</strong></span><span>Пробег<strong>{number(selected.mileage)} км</strong></span><span>Гориво<strong>{selected.fuel}</strong></span><span>Скоростна кутия<strong>{selected.gearbox}</strong></span><span>Купе<strong>{selected.body}</strong></span><span>Екологична категория<strong>{emissionClassOf(selected) || "Не е посочена"}</strong></span><span>CO₂<strong>{co2Of(selected) == null ? "Не е посочено" : `${co2Of(selected)} г/км`}</strong></span></div><button className="primary-button wide" onClick={() => toggleFavorite(selected.id)}><Icon name="heart" size={19} fill={favorites.includes(selected.id) ? "currentColor" : "none"} />{favorites.includes(selected.id) ? "Запазено в любими" : "Запази в любими"}</button><button className="compare-detail-button" onClick={() => toggleCompare(selected.id)} aria-pressed={compareIds.includes(selected.id)}>{compareIds.includes(selected.id) ? "✓ Добавена за сравнение" : "+ Добави за сравнение"}</button>{selected.details && <p className="detail-description">{selected.details}</p>}{marketplace && !selected.draft && <section id="seller-message" className="inquiry-panel"><h2>Съобщение до продавача</h2>
         {!user ? <form onSubmit={sendSignIn}><p>Влез с имейл, за да изпратиш запитване. След вход ще се върнеш към тази обява.</p><label>Имейл<input type="email" required value={email} onChange={(event) => setEmail(event.target.value)} placeholder="name@example.com" /></label><button className="primary-button" disabled={busy}>{busy ? "Изпращане…" : "Изпрати линк за вход"}</button></form>
         : user.id === selected.sellerId ? <p>Това е твоята обява.</p>
         : sentInquiryIds.includes(String(selected.id)) ? <p>Вече си изпратил запитване за тази обява.</p>
         : <form onSubmit={sendInquiry}><label>Съобщение до продавача<textarea required minLength={10} maxLength={2000} rows={4} value={inquiryMessage} onChange={(event) => setInquiryMessage(event.target.value)} placeholder="Здравейте, автомобилът още ли е наличен?" /></label><p>Имейлът ти ({user.email}) ще бъде показан на продавача, за да може да ти отговори.</p><button className="primary-button" type="submit" disabled={busy}>{busy ? "Изпращане…" : "Изпрати запитване"}</button></form>}
         {inquiryNotice && <p role="status" className="inquiry-notice">{inquiryNotice}</p>}
-      </section>}{!marketplace && <div className="detail-hint">Примерна обява — запитванията са достъпни за реалните обяви.</div>}</div></div></main>}
+      </section>}{!marketplace && <div className="detail-hint">Примерна обява — запитванията са достъпни за реалните обяви.</div>}</div></div>{marketplace && !selected.draft && (!user || user.id !== selected.sellerId) && <div className="seller-contact-dock"><SellerContactActions car={selected} /></div>}</main>}
 
     {view === "valuation" && <main className="page-width interior valuation-page"><div className="interior-heading"><span className="section-kicker">MMC AUTO · ОРИЕНТИР</span><h1>Оцени своя автомобил</h1><p>Сравняваме обявени цени за същия модел и правим приблизителна корекция за година, пробег и външен вид.</p></div>
       <div className="valuation-layout"><form className="post-form valuation-form" onSubmit={valueCar}><div className="form-grid">
@@ -554,6 +570,7 @@ export default function Home() {
       {([ ["fuel", "Гориво", ["Бензин", "Дизел", "Хибрид", "Електрически"]], ["gearbox", "Скоростна кутия", ["Ръчна", "Автоматична"]], ["body", "Купе", categories] ] as const).map(([key, label, options]) => <label key={key}>{label}<select value={draftForm[key]} onChange={(e) => setDraftForm({ ...draftForm, [key]: e.target.value, ...(key === "fuel" ? { emissionClass: "", co2GKm: "" } : {}) })}>{options.map((option) => <option key={option}>{option}</option>)}</select></label>)}
       <label>Екологична категория<select disabled={draftForm.fuel === "Електрически"} value={draftForm.fuel === "Електрически" ? zeroEmissions : draftForm.emissionClass} onChange={(e) => setDraftForm({ ...draftForm, emissionClass: e.target.value })}><option value="">Не е посочена</option>{draftForm.fuel === "Електрически" && <option>{zeroEmissions}</option>}{emissionClasses.map((value) => <option key={value}>{value}</option>)}</select></label>
       <label>CO₂ емисии при движение (г/км)<input type="number" min="0" max="1000" step="1" disabled={draftForm.fuel === "Електрически"} value={draftForm.fuel === "Електрически" ? "0" : draftForm.co2GKm} onChange={(e) => setDraftForm({ ...draftForm, co2GKm: e.target.value })} placeholder="По документи, ако е известно" /></label>
+      {marketplace && <label>Телефон за връзка (по желание)<input type="tel" inputMode="tel" autoComplete="tel" maxLength={24} placeholder="+359 87 123 4567" value={draftForm.contactPhone} onChange={(e) => setDraftForm({ ...draftForm, contactPhone: e.target.value })} /><small>Ако го попълниш, номерът ще се вижда публично в обявата след одобрение.</small></label>}
     </div>{marketplace && <><label className="photo-input">Описание<textarea maxLength={5000} rows={5} placeholder="Състояние, оборудване, сервизна история…" value={draftForm.details} onChange={(event) => setDraftForm({ ...draftForm, details: event.target.value })} /></label><label className="photo-input">Снимки (до 8, по 5 MB)<input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={(event) => selectPhotos(event.target.files)} />{photos.length > 0 && <small>{photos.length} избрани</small>}</label></>}<button className="primary-button" type="submit" disabled={busy}><Icon name="plus" size={18} /> {marketplace ? busy ? "Изпращане…" : "Изпрати за преглед" : "Запази чернова"}</button><p className="form-note">{marketplace ? "Ще виждаш състоянието на обявата си по-долу." : "Тази версия не публикува обяви онлайн. Снимките, профилите и публичното публикуване са следваща стъпка."}</p></form>}
       {marketplace && user && <section className="account-section"><div className="account-heading"><div><span className="section-kicker">МОЯТ ПРОФИЛ</span><h2>Моите обяви</h2><p>{user.email}</p></div><button className="text-link" onClick={() => marketplace.auth.signOut()}>Изход</button></div>
         {myListings.length ? <div className="account-list">{myListings.map((row) => <article className="account-row" key={row.id}><CarPhoto photo={0} imageUrl={row.imageUrl} /><div><strong>{row.make} {row.model}</strong><small>{row.year} · {euro(row.price_eur)} · {row.city}</small><span className={`status-pill status-${row.status}`}>{{ draft: "Чернова", pending: "Чака одобрение", active: "Публикувана", archived: "Свалена / архивирана" }[row.status]}</span>{row.status !== "archived" && <button className="remove-listing" type="button" disabled={busy} onClick={() => removeMyListing(row)}>{row.status === "active" ? "Свали обявата" : "Изтрий обявата"}</button>}</div></article>)}</div> : <p className="account-empty">Все още нямаш изпратени обяви.</p>}
