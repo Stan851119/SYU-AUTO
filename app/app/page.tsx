@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { loadActiveListings, loadListingInquiries, loadMyListings, loadPendingListings, marketplace, type InquiryRow, type ListingRow } from "../lib/marketplace";
 import { estimateCar, type Exterior, type Valuation } from "../lib/valuation";
+import { cityCoordinates, distanceBetweenCitiesKm } from "../lib/locations";
 
 type Car = {
   id: number | string;
@@ -29,9 +30,9 @@ type Car = {
 };
 
 type View = "home" | "results" | "detail" | "favorites" | "post" | "valuation" | "compare";
-type Filters = { make: string; model: string; min: string; max: string; fuel: string; city: string; body: string; year: string; gearbox: string; emissionClass: string };
+type Filters = { make: string; model: string; min: string; max: string; fuel: string; city: string; body: string; year: string; yearMax: string; mileageMin: string; mileageMax: string; originCity: string; radiusKm: string; gearbox: string; emissionClass: string };
 
-const initialFilters: Filters = { make: "", model: "", min: "", max: "", fuel: "", city: "", body: "", year: "", gearbox: "", emissionClass: "" };
+const initialFilters: Filters = { make: "", model: "", min: "", max: "", fuel: "", city: "", body: "", year: "", yearMax: "", mileageMin: "", mileageMax: "", originCity: "", radiusKm: "", gearbox: "", emissionClass: "" };
 const emissionClasses = ["Euro 1", "Euro 2", "Euro 3", "Euro 4", "Euro 5", "Euro 6"];
 const zeroEmissions = "Нулеви емисии";
 const emissionClassOf = (car: Car) => car.fuel === "Електрически" ? zeroEmissions : car.emissionClass;
@@ -162,6 +163,7 @@ export default function Home() {
     { role: "assistant", content: "Здравей! Мога да помогна да потърсиш кола сред наличните обяви или да те насоча към оценката.", demo: true },
   ]);
   const [sort, setSort] = useState("newest");
+  useEffect(() => { if (!filters.originCity && sort === "distanceAsc") setSort("newest"); }, [filters.originCity, sort]);
   const [mobileMenu, setMobileMenu] = useState(false);
   const [notice, setNotice] = useState("");
   const [draftForm, setDraftForm] = useState({ make: "", model: "", year: "", mileage: "", price: "", fuel: "Бензин", gearbox: "Ръчна", emissionClass: "", co2GKm: "", city: "", body: "Седан", details: "" });
@@ -225,9 +227,15 @@ export default function Home() {
     (!filters.city || car.city === filters.city) &&
     (!filters.body || car.body === filters.body) &&
     (!filters.year || car.year >= Number(filters.year)) &&
+    (!filters.yearMax || car.year <= Number(filters.yearMax)) &&
+    (!filters.mileageMin || car.mileage >= Number(filters.mileageMin)) &&
+    (!filters.mileageMax || car.mileage <= Number(filters.mileageMax)) &&
+    (!filters.radiusKm || !filters.originCity || (distanceBetweenCitiesKm(filters.originCity, car.city) ?? Infinity) <= Number(filters.radiusKm)) &&
     (!filters.gearbox || car.gearbox === filters.gearbox) &&
     (!filters.emissionClass || emissionClassOf(car) === filters.emissionClass)
-  ).sort((a, b) => sort === "priceAsc" ? a.price - b.price : sort === "priceDesc" ? b.price - a.price : 0), [cars, filters, sort]);
+  ).sort((a, b) => sort === "priceAsc" ? a.price - b.price : sort === "priceDesc" ? b.price - a.price :
+    sort === "mileageAsc" ? a.mileage - b.mileage : sort === "yearDesc" ? b.year - a.year :
+    sort === "distanceAsc" && filters.originCity ? (distanceBetweenCitiesKm(filters.originCity, a.city) ?? Infinity) - (distanceBetweenCitiesKm(filters.originCity, b.city) ?? Infinity) : 0), [cars, filters, sort]);
 
   const selected = cars.find((car) => car.id === selectedId) || cars[0];
   const shownCars = view === "favorites" ? cars.filter((car) => favorites.includes(car.id)) : matches;
@@ -241,7 +249,8 @@ export default function Home() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
   function updateFilter(key: keyof Filters, value: string) {
-    setFilters((old) => ({ ...old, [key]: value, ...(key === "make" ? { model: "" } : {}) }));
+    setFilters((old) => ({ ...old, [key]: value, ...(key === "make" ? { model: "" } : {}), ...(key === "originCity" && !value ? { radiusKm: "" } : {}) }));
+    if (key === "originCity" && !value && sort === "distanceAsc") setSort("newest");
   }
   function runSearch(event?: FormEvent) {
     event?.preventDefault();
@@ -460,7 +469,7 @@ export default function Home() {
         <strong>{car.title}</strong>
         <span className="car-meta">{car.year} · {number(car.mileage)} км · {car.fuel}{emissionClassOf(car) ? ` · ${emissionClassOf(car)}` : ""}</span>
         <b className="price">{euro(car.price)}</b>
-        <span className="car-location"><Icon name="pin" size={14} />{car.city}</span>
+        <span className="car-location"><Icon name="pin" size={14} />{car.city}{filters.originCity && distanceBetweenCitiesKm(filters.originCity, car.city) !== null ? ` · около ${distanceBetweenCitiesKm(filters.originCity, car.city)} км от ${filters.originCity}` : ""}</span>
       </button>
       <button className={`compare-card-button ${compareIds.includes(car.id) ? "selected" : ""}`} onClick={() => toggleCompare(car.id)} aria-pressed={compareIds.includes(car.id)}>{compareIds.includes(car.id) ? "✓ Добавена за сравнение" : "+ Сравни"}</button>
     </article>;
@@ -513,7 +522,7 @@ export default function Home() {
 
     {(view === "results" || view === "favorites") && <main className="page-width interior"><div className="interior-heading"><div><span className="section-kicker">MMC AUTO · {marketplace ? "ОБЯВИ" : "ДЕМО КАТАЛОГ"}</span><h1>{view === "favorites" ? "Любими автомобили" : "Автомобили"}</h1><p>{view === "favorites" ? `${shownCars.length} ${shownCars.length === 1 ? "запазена обява" : "запазени обяви"} в този браузър` : `${shownCars.length} ${shownCars.length === 1 ? "резултат" : "резултата"} ${marketplace ? "в каталога" : "от примерните обяви и твоите чернови"}`}</p></div></div>
       {view === "results" && <div className="results-search">{SearchForm()}</div>}
-      <div className="results-toolbar"><span>{shownCars.length} {shownCars.length === 1 ? "обява" : "обяви"}</span>{view === "results" && <label>Подреди по <select value={sort} onChange={(e) => setSort(e.target.value)}><option value="newest">Най-нови</option><option value="priceAsc">Цена: ниска към висока</option><option value="priceDesc">Цена: висока към ниска</option></select></label>}</div>
+      <div className="results-toolbar"><span>{shownCars.length} {shownCars.length === 1 ? "обява" : "обяви"}</span>{view === "results" && <label>Подреди по <select value={sort} onChange={(e) => setSort(e.target.value)}><option value="newest">Най-нови</option><option value="priceAsc">Цена: ниска към висока</option><option value="priceDesc">Цена: висока към ниска</option><option value="mileageAsc">Най-малък пробег</option><option value="yearDesc">Най-нова година</option><option value="distanceAsc" disabled={!filters.originCity}>Най-близо до мен</option></select></label>}</div>
       {shownCars.length ? <div className="cards-grid results-grid">{shownCars.map((car) => <CarCard car={car} key={car.id} />)}</div> : <div className="empty-state"><Icon name={view === "favorites" ? "heart" : "search"} size={38} /><h2>{view === "favorites" ? "Още нямаш любими обяви" : "Няма съвпадения"}</h2><p>{view === "favorites" ? "Натисни сърцето на автомобил, който ти харесва." : "Промени някой от филтрите, за да видиш повече автомобили."}</p><button className="primary-button" onClick={() => { setFilters(initialFilters); navigate("results"); }}>Разгледай обявите</button></div>}
     </main>}
 
@@ -573,10 +582,30 @@ export default function Home() {
       <label>Цена от<input type="number" min="0" value={filters.min} onChange={(e) => updateFilter("min", e.target.value)} placeholder="Мин. €" /></label>
       <label>Цена до<input type="number" min="0" value={filters.max} onChange={(e) => updateFilter("max", e.target.value)} placeholder="Макс. €" /></label>
       <label>Гориво<select value={filters.fuel} onChange={(e) => updateFilter("fuel", e.target.value)}><option value="">Всички</option>{["Бензин", "Дизел", "Хибрид", "Електрически"].map((fuel) => <option key={fuel}>{fuel}</option>)}</select></label>
-      <label>Град<select value={filters.city} onChange={(e) => updateFilter("city", e.target.value)}><option value="">Всички градове</option>{[...new Set(cars.map((car) => car.city))].sort().map((city) => <option key={city}>{city}</option>)}</select></label>
+      <label>Град на обявата<select value={filters.city} onChange={(e) => updateFilter("city", e.target.value)}><option value="">Всички градове</option>{[...new Set(cars.map((car) => car.city))].sort().map((city) => <option key={city}>{city}</option>)}</select></label>
       <button className="search-button" type="submit"><Icon name="search" size={19} /> Търси {matches.length} {matches.length === 1 ? "обява" : "обяви"}</button>
-    </div><div className="search-bottom"><button type="button" onClick={() => setAdvanced(!advanced)} aria-expanded={advanced}><Icon name="sliders" size={16} /> Разширено търсене · Тип автомобил <Icon name="chevron" size={15} /></button>{Object.values(filters).some(Boolean) && <button type="button" onClick={() => setFilters(initialFilters)}>Изчисти филтрите</button>}</div>
-    {advanced && <><div className="body-filter"><div className="body-filter-head"><strong>Тип автомобил</strong><button type="button" onClick={() => updateFilter("body", "")} className={!filters.body ? "selected" : ""}>Всички</button></div><div className="body-filter-grid">{categories.map((category) => <button type="button" key={category} className={`body-filter-option${filters.body === category ? " selected" : ""}`} aria-pressed={filters.body === category} onClick={() => updateFilter("body", filters.body === category ? "" : category)}><img src={categoryImages[category]} alt="" loading="lazy" /><span>{category}</span></button>)}</div></div><div className="advanced-fields"><label>Година от<input type="number" min="1950" max="2030" placeholder="Година" value={filters.year} onChange={(e) => updateFilter("year", e.target.value)} /></label><label>Скоростна кутия<select value={filters.gearbox} onChange={(e) => updateFilter("gearbox", e.target.value)}><option value="">Всички</option><option>Ръчна</option><option>Автоматична</option></select></label><label>Екологична категория<select value={filters.emissionClass} onChange={(e) => updateFilter("emissionClass", e.target.value)}><option value="">Всички</option>{[...emissionClasses, zeroEmissions].map((value) => <option key={value}>{value}</option>)}</select></label><button type="submit" className="advanced-search-submit">Покажи {matches.length} {matches.length === 1 ? "обява" : "обяви"} <Icon name="arrow" size={16} /></button></div></>}
+    </div><div className="search-bottom"><button type="button" onClick={() => setAdvanced(!advanced)} aria-expanded={advanced}><Icon name="sliders" size={16} /> Разширено търсене · Тип, година, пробег и разстояние <Icon name="chevron" size={15} /></button>{Object.values(filters).some(Boolean) && <button type="button" onClick={() => { setFilters(initialFilters); if (sort === "distanceAsc") setSort("newest"); }}>Изчисти филтрите</button>}</div>
+    {advanced && <>
+      <div className="body-filter">
+        <div className="body-filter-head"><strong>Тип автомобил</strong><button type="button" onClick={() => updateFilter("body", "")} className={!filters.body ? "selected" : ""}>Всички</button></div>
+        <div className="body-filter-grid">{categories.map((category) => <button type="button" key={category} className={`body-filter-option${filters.body === category ? " selected" : ""}`} aria-pressed={filters.body === category} onClick={() => updateFilter("body", filters.body === category ? "" : category)}><img src={categoryImages[category]} alt="" loading="lazy" /><span>{category}</span></button>)}</div>
+      </div>
+      <div className="advanced-fields">
+        <div className="advanced-fields-heading">Година и пробег</div>
+        <label>Година от<input type="number" min="1950" max="2030" placeholder="От" value={filters.year} onChange={(e) => updateFilter("year", e.target.value)} /></label>
+        <label>Година до<input type="number" min="1950" max="2030" placeholder="До" value={filters.yearMax} onChange={(e) => updateFilter("yearMax", e.target.value)} /></label>
+        <label>Пробег от (км)<input type="number" min="0" step="1000" placeholder="От" value={filters.mileageMin} onChange={(e) => updateFilter("mileageMin", e.target.value)} /></label>
+        <label>Пробег до (км)<input type="number" min="0" step="1000" placeholder="До" value={filters.mileageMax} onChange={(e) => updateFilter("mileageMax", e.target.value)} /></label>
+        <div className="advanced-fields-heading">Разстояние до автомобила</div>
+        <label>Търси около<select value={filters.originCity} onChange={(e) => updateFilter("originCity", e.target.value)}><option value="">Избери твоя град</option>{Object.keys(cityCoordinates).sort((a, b) => a.localeCompare(b, "bg")).map((city) => <option key={city}>{city}</option>)}</select></label>
+        <label>В радиус<select value={filters.radiusKm} disabled={!filters.originCity} onChange={(e) => updateFilter("radiusKm", e.target.value)}><option value="">Цяла България</option>{[25, 50, 100, 200, 300, 500].map((km) => <option value={km} key={km}>До {km} км</option>)}</select></label>
+        <p className="distance-note">Ориентировъчно разстояние по права линия между центровете на градовете. При избран радиус обяви от непознат град не се включват.</p>
+        <div className="advanced-fields-heading">Още условия</div>
+        <label>Скоростна кутия<select value={filters.gearbox} onChange={(e) => updateFilter("gearbox", e.target.value)}><option value="">Всички</option><option>Ръчна</option><option>Автоматична</option></select></label>
+        <label>Екологична категория<select value={filters.emissionClass} onChange={(e) => updateFilter("emissionClass", e.target.value)}><option value="">Всички</option>{[...emissionClasses, zeroEmissions].map((value) => <option key={value}>{value}</option>)}</select></label>
+        <button type="submit" className="advanced-search-submit">Покажи {matches.length} {matches.length === 1 ? "обява" : "обяви"} <Icon name="arrow" size={16} /></button>
+      </div>
+    </>}
     </form>;
   }
 }
