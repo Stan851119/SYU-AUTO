@@ -45,24 +45,26 @@ const demoCars: Car[] = [
   { id: 6, make: "Mazda", model: "MX-5", title: "Mazda MX-5 Roadster", year: 2019, mileage: 48000, price: 22900, fuel: "Бензин", gearbox: "Ръчна", city: "Бургас", body: "Кабрио", photo: 5 },
 ];
 const categories = ["Хечбек", "Седан", "Комби", "SUV / Джип", "Купе", "Кабрио", "Бусове"];
-const categoryProfiles: Record<string, { outline: string; windows: string; wheels?: [number, number] }> = {
-  "Хечбек": { outline: "M11 52 L16 43 L36 40 L50 25 Q54 21 64 21 L103 21 Q113 21 119 30 L129 43 L157 47 Q166 48 168 55 L168 60 L12 60 Z", windows: "M39 41 L53 28 Q56 25 64 25 L99 25 L99 41 Z M104 25 Q112 26 116 32 L122 41 L104 41 Z" },
-  "Седан": { outline: "M10 53 L16 45 L35 42 L53 27 Q58 22 68 22 L109 22 Q119 22 126 29 L139 42 L161 46 Q169 48 170 55 L170 60 L10 60 Z", windows: "M39 42 L56 30 Q60 26 68 26 L90 26 L90 42 Z M95 26 L109 26 Q118 26 123 33 L132 42 L95 42 Z" },
-  "Комби": { outline: "M10 54 L15 46 L28 43 L34 25 Q36 21 45 21 L119 21 Q126 21 130 29 L137 43 L160 47 Q168 49 170 55 L170 60 L10 60 Z", windows: "M31 43 L38 27 Q40 25 46 25 L89 25 L89 43 Z M94 25 L117 25 Q124 25 127 32 L132 43 L94 43 Z" },
-  "SUV / Джип": { outline: "M10 53 L14 46 L27 43 L34 22 Q36 18 43 18 L119 18 Q125 18 131 25 L141 43 L161 47 Q169 49 170 56 L170 62 L10 62 Z", windows: "M30 43 L38 25 Q40 22 46 22 L91 22 L91 43 Z M96 22 L117 22 Q124 22 128 29 L135 43 L96 43 Z", wheels: [43, 139] },
-  "Купе": { outline: "M9 54 L18 47 L43 44 Q64 21 88 22 Q111 22 132 44 L159 47 Q168 49 170 55 L170 60 L10 60 Z", windows: "M48 44 Q66 27 86 26 L90 26 L90 44 Z M95 26 Q112 29 126 44 L95 44 Z" },
-  "Кабрио": { outline: "M9 53 L18 46 L58 43 L69 28 L73 28 L77 43 L135 43 L160 47 Q169 49 170 55 L170 60 L10 60 Z", windows: "M62 42 L70 31 L73 42 M80 43 L127 43" },
-  "Бусове": { outline: "M10 54 L15 45 L20 22 Q21 15 29 15 L118 15 Q126 15 130 23 L139 45 L161 48 Q169 49 170 55 L170 62 L10 62 Z", windows: "M25 42 L25 23 Q25 20 31 20 L85 20 L85 42 Z M91 20 L116 20 Q123 20 127 27 L134 42 L91 42 Z", wheels: [42, 141] },
+const categoryProfiles: Record<string, { body: string; glass: string; accent: string; wheels: [number, number] }> = {
+  "Хечбек": { body: "M8 52 Q10 47 20 46 L35 43 L49 28 Q54 23 63 23 L99 23 Q107 23 114 31 L127 44 L158 48 Q168 49 171 55 L170 62 L10 62 Z", glass: "M42 43 L53 30 Q56 27 63 27 L92 27 L90 43 Z M96 27 L100 27 Q107 28 112 34 L121 43 L95 43 Z", accent: "M46 44 H119", wheels: [42, 141] },
+  "Седан": { body: "M8 53 Q10 47 22 46 L41 43 L58 29 Q66 22 77 22 L111 22 Q122 22 131 31 L143 44 L160 47 Q170 49 172 55 L171 62 L9 62 Z", glass: "M48 43 L62 31 Q68 27 77 27 L94 27 L92 43 Z M99 27 L110 27 Q120 27 126 34 L136 43 L97 43 Z", accent: "M48 45 H140", wheels: [42, 143] },
+  "Комби": { body: "M8 54 Q10 48 21 46 L31 44 L38 27 Q41 21 51 21 L117 21 Q126 21 133 30 L143 44 L162 48 Q170 50 172 55 L171 63 L9 63 Z", glass: "M35 43 L43 28 Q45 25 52 25 L94 25 L93 43 Z M99 25 L116 25 Q124 25 129 33 L136 43 L98 43 Z", accent: "M37 45 H138", wheels: [43, 142] },
+  "SUV / Джип": { body: "M8 53 Q10 47 21 45 L30 43 L37 24 Q39 19 48 19 L115 19 Q124 19 131 27 L143 43 L162 47 Q171 49 173 55 L172 64 L9 64 Z", glass: "M35 42 L43 26 Q45 23 50 23 L91 23 L90 42 Z M97 23 L114 23 Q122 23 127 30 L136 42 L96 42 Z", accent: "M38 45 H140", wheels: [42, 144] },
+  "Купе": { body: "M7 55 Q9 49 23 47 L44 43 Q66 23 86 22 Q109 20 126 36 L137 44 L160 47 Q170 49 173 56 L171 62 L8 62 Z", glass: "M48 43 Q67 27 85 26 L93 26 L91 43 Z M99 26 Q111 28 123 40 L128 43 L96 43 Z", accent: "M47 45 Q86 47 134 45", wheels: [43, 144] },
+  "Кабрио": { body: "M7 55 Q9 49 23 47 L49 43 L67 42 L73 27 L78 27 L81 42 L134 42 L160 47 Q170 49 173 56 L171 62 L8 62 Z", glass: "M68 40 L75 30 L78 40 Z", accent: "M49 45 H136", wheels: [43, 144] },
+  "Бусове": { body: "M8 55 L12 27 Q13 16 24 16 L116 16 Q125 16 132 25 L144 44 L163 48 Q171 50 173 56 L172 64 L8 64 Z", glass: "M17 40 L18 26 Q18 21 25 21 L90 21 L90 40 Z M97 21 L115 21 Q123 21 128 29 L136 40 L97 40 Z", accent: "M17 44 H140", wheels: [42, 144] },
 };
 
 function CategoryCar({ category }: { category: string }) {
   const profile = categoryProfiles[category];
-  const [rearWheel, frontWheel] = profile.wheels || [42, 139];
+  const [rearWheel, frontWheel] = profile.wheels;
   return <svg className="category-car" viewBox="0 0 180 80" fill="none" aria-hidden="true" focusable="false">
-    <path d={profile.outline} fill="#eef1f5" stroke="#18232f" strokeWidth="2.6" strokeLinejoin="round" />
-    <path d={profile.windows} stroke="#657181" strokeWidth="2" strokeLinejoin="round" />
-    <path d="M16 52 H26 M153 52 H165" stroke="#e41b31" strokeWidth="3" strokeLinecap="round" />
-    {[rearWheel, frontWheel].map((x) => <g key={x}><circle cx={x} cy="60" r="9" fill="#18232f" /><circle cx={x} cy="60" r="4" fill="#f7f8fb" /></g>)}
+    <path d={profile.body} fill="#263443" stroke="#14202d" strokeWidth="1.5" strokeLinejoin="round" />
+    <path d={profile.glass} fill="#b8c9d5" stroke="#e1eaf0" strokeWidth="1.2" strokeLinejoin="round" />
+    <path d={profile.accent} stroke="#e3293b" strokeWidth="1.7" strokeLinecap="round" />
+    <path d="M12 53 L21 51 M158 51 L169 54" stroke="#f45a65" strokeWidth="2.4" strokeLinecap="round" />
+    <path d="M61 49 H118" stroke="#697b8b" strokeWidth="1" strokeLinecap="round" opacity=".7" />
+    {[rearWheel, frontWheel].map((x) => <g key={x}><circle cx={x} cy="61" r="11" fill="#f0f2f5" /><circle cx={x} cy="61" r="8.5" fill="#14202d" /><circle cx={x} cy="61" r="4.4" fill="#9baab6" /><circle cx={x} cy="61" r="1.5" fill="#f0f2f5" /></g>)}
   </svg>;
 }
 const euro = (n: number) => new Intl.NumberFormat("bg-BG").format(n) + " €";
