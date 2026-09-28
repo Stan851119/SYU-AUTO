@@ -20,6 +20,8 @@ button { cursor: pointer; }
 .main-nav { align-self: stretch; gap: 28px; }
 .main-nav button { position: relative; border: 0; background: none; color: #eceef2; font-size: 13px; font-weight: 700; padding: 4px 0; white-space: nowrap; }
 .main-nav button:hover, .main-nav button.active { color: #fff; }
+.main-nav a { color: #eceef2; font-size: 13px; font-weight: 700; text-decoration: none; white-space: nowrap; }
+.main-nav a:hover { color: #fff; }
 .main-nav button.active:after { content: ""; position: absolute; bottom: -25px; left: 0; right: 0; height: 3px; background: #e91e31; }
 .nav-count { margin-left: 3px; border-radius: 20px; background: #e91e31; padding: 2px 6px; font-size: 10px; }
 .header-actions { gap: 18px; }
@@ -159,6 +161,8 @@ button { cursor: pointer; }
 .primary-button:disabled { cursor: wait; opacity: .65; transform: none; }.detail-description { margin-top: 20px; line-height: 1.6; white-space: pre-wrap; font-size: 14px; }
 .account-section { margin-top: 36px; }.account-heading { display: flex; justify-content: space-between; align-items: center; gap: 16px; }.account-heading h2 { margin: 5px 0; font-size: 22px; }.account-heading p { margin: 0; color: #687383; font-size: 13px; }
 .account-list { display: grid; gap: 12px; margin-top: 17px; }.account-row { display: grid; grid-template-columns: 140px 1fr; gap: 17px; overflow: hidden; background: white; border: 1px solid #e3e7ed; border-radius: 9px; padding: 10px; }.account-row .car-photo { height: 100px; border-radius: 5px; }.account-row > div:last-child { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; padding: 6px 0; }.account-row strong { font-size: 15px; }.account-row small { color: #697585; }.account-empty { margin-top: 15px; color: #687383; font-size: 14px; }
+.remove-listing { margin-top: 7px; padding: 8px 11px; border: 1px solid #c5283b; border-radius: 5px; background: #fff; color: #a9162a; font: inherit; font-size: 13px; font-weight: 700; }
+.remove-listing:disabled { opacity: .5; }
 .moderator-row { grid-template-columns: minmax(220px, 320px) 1fr; }
 .moderator-row .moderator-gallery .detail-photo { height: 220px; }
 .moderator-row .moderator-gallery .photo-thumbnails button { flex-basis: 56px; height: 48px; }
@@ -167,18 +171,18 @@ button { cursor: pointer; }
 .site-footer { background: #0c111a; color: #fff; padding: 37px 0; }.footer-inner { display: flex; justify-content: space-between; align-items: center; gap: 20px; }
 .assistant-launch { position: fixed; z-index: 40; right: 24px; bottom: 24px; display: flex; align-items: center; gap: 8px; padding: 12px 18px; border: 0; border-radius: 40px; background: #e5192e; color: #fff; font-size: 13px; font-weight: 800; box-shadow: 0 8px 25px #0004; }.assistant-panel { position: fixed; z-index: 39; right: 24px; bottom: 85px; width: min(380px, calc(100vw - 32px)); height: min(520px, calc(100vh - 120px)); display: flex; flex-direction: column; overflow: hidden; border: 1px solid #dfe3e9; border-radius: 14px; background: white; box-shadow: 0 12px 40px #0004; }.assistant-head { display: flex; justify-content: space-between; align-items: center; padding: 16px; background: #101824; color: white; }.assistant-head strong, .assistant-head small { display: block; }.assistant-head small { margin-top: 4px; color: #b8c0cb; font-size: 10px; }.assistant-head button { background: none; border: 0; color: white; }.assistant-messages { flex: 1; overflow-y: auto; padding: 16px; }.assistant-message { max-width: 92%; width: fit-content; margin-bottom: 12px; padding: 10px 12px; border-radius: 12px; background: #f0f2f6; color: #242c37; font-size: 13px; line-height: 1.45; white-space: pre-wrap; }.assistant-message.from-user { margin-left: auto; background: #e51c30; color: white; }.assistant-message small { display: block; margin-top: 5px; opacity: .65; font-size: 10px; }.assistant-input { display: flex; border-top: 1px solid #e4e8ee; }.assistant-input input { flex: 1; min-width: 0; height: 53px; padding: 0 14px; border: 0; outline-color: #e5192e; font-size: 13px; }.assistant-input button { width: 50px; border: 0; color: #e5192e; background: white; }.assistant-input button:disabled { opacity: .4; }
 .footer-inner strong { font-size: 22px; letter-spacing: -.05em; }.footer-inner p, .footer-inner small { color: #9da5b1; font-size: 12px; }
-.footer-inner div:nth-child(2) { display: flex; gap: 20px; }.footer-inner button { border: 0; background: none; color: #e3e6eb; font-size: 12px; }
+.footer-inner div:nth-child(2) { display: flex; flex-wrap: wrap; gap: 20px; }.footer-inner button, .footer-inner a { border: 0; background: none; color: #e3e6eb; font-size: 12px; text-decoration: none; }
 
 @media (max-width: 1120px) {
   .main-nav { gap: 15px; }.search-fields { grid-template-columns: repeat(3, 1fr); }.search-button { grid-column: span 3; }
   .category-grid { grid-template-columns: repeat(4, 1fr); }.cards-grid, .results-grid { grid-template-columns: repeat(3, 1fr); }
 }
-@media (max-width: 750px) {
+@media (max-width: 1000px) {
   .compare-bar { bottom: 82px; }.compare-table th, .compare-table td { min-width: 165px; }.compare-table thead th { min-width: 175px; }
   .page-width, .header-inner { width: calc(100% - 32px); }.header-inner { height: 68px; gap: 10px; }
   .brand span { font-size: 23px; }.brand small { font-size: 9px; }
   .main-nav { display: none; position: absolute; top: 68px; left: 0; right: 0; background: #10151e; padding: 15px 20px 22px; box-shadow: 0 10px 20px #0003; }
-  .main-nav.open { display: flex; flex-direction: column; align-items: stretch; gap: 2px; }.main-nav button { text-align: left; padding: 13px 8px; }.main-nav button.active:after { bottom: 5px; right: auto; width: 40px; }
+  .main-nav.open { display: flex; flex-direction: column; align-items: stretch; gap: 2px; }.main-nav button, .main-nav a { text-align: left; padding: 13px 8px; }.main-nav button.active:after { bottom: 5px; right: auto; width: 40px; }
   .header-actions { gap: 5px; }.header-heart { display: none; }.post-button { font-size: 0; gap: 5px; padding: 10px 9px; }.post-button::after { content: "Обява"; font-size: 12px; }.post-button svg { width: 19px; }.menu-button { display: block; padding: 7px; }
   .hero { height: 380px; background-position: 65% center; }.hero-overlay { background: linear-gradient(90deg, #080c16eb 0%, #080c16b8 54%, #080c1640); }
   .hero-content { padding-top: 44px; }.hero h1 { font-size: 38px; }.hero p { font-size: 14px; max-width: 310px; }.eyebrow { font-size: 9px; }.hero-points { flex-wrap: wrap; gap: 10px 17px; margin-top: 24px; font-size: 10px; }.hero-points svg { width: 19px; }
