@@ -51,6 +51,17 @@ button { cursor: pointer; }
 .search-bottom { display: flex; justify-content: center; gap: 22px; padding-top: 12px; }
 .search-bottom button { border: 0; background: none; display: flex; align-items: center; gap: 6px; font-size: 11px; color: #596171; text-decoration: underline; }
 .advanced-fields { border-top: 1px solid #eceef1; margin-top: 12px; padding-top: 14px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.body-filter { border-top: 1px solid #eceef1; margin-top: 14px; padding-top: 16px; }
+.body-filter-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 11px; color: #232c39; font-size: 14px; }
+.body-filter-head button { border: 1px solid #dce0e7; border-radius: 20px; background: #fff; color: #515b69; padding: 5px 13px; font-size: 11px; font-weight: 750; }
+.body-filter-head button.selected { border-color: #d7192d; color: #d7192d; background: #fff2f3; }
+.body-filter-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 10px; }
+.body-filter-option { min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: end; gap: 2px; padding: 7px 5px 10px; border: 1px solid #e0e4ea; border-radius: 10px; background: #fff; color: #202b3a; font-size: 11px; font-weight: 750; transition: border-color .2s, box-shadow .2s, background .2s; }
+.body-filter-option:hover, .body-filter-option:focus-visible { border-color: #d7192d; box-shadow: 0 5px 15px #22304418; }
+.body-filter-option.selected { border: 2px solid #d7192d; background: #fff5f6; padding: 6px 4px 9px; }
+.body-filter-option img { display: block; width: 100%; height: 92px; object-fit: contain; }
+.body-filter-option span { white-space: nowrap; }
+.advanced-search-submit { grid-column: 1 / -1; justify-self: end; display: inline-flex; align-items: center; gap: 8px; padding: 11px 17px; border: 0; border-radius: 7px; background: #dc1d30; color: #fff; font-size: 12px; font-weight: 800; }
 .home-content { padding-top: 37px; padding-bottom: 65px; }
 .section-head { display: flex; align-items: end; justify-content: space-between; gap: 25px; margin-bottom: 18px; }
 .section-kicker { color: #dc1d30; letter-spacing: .12em; font-size: 10px; font-weight: 800; }
@@ -61,8 +72,8 @@ button { cursor: pointer; }
 .category-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 12px; }
 .category-tile { min-width: 0; border: 1px solid #e5e8ee; border-radius: 10px; background: white; text-align: left; padding: 9px 9px 11px; box-shadow: 0 2px 7px #25334a09; transition: transform .2s, box-shadow .2s; }
 .category-tile:hover, .car-card:hover { transform: translateY(-3px); box-shadow: 0 10px 25px #16213818; }
-.category-tile .category-image { display: grid; place-items: center; height: 75px; border-radius: 6px; margin-bottom: 10px; background: #f0f2f5; }
-.category-car { display: block; width: min(95%, 220px); height: 70px; }
+.category-tile .category-image { display: grid; place-items: center; height: 95px; border-radius: 6px; margin-bottom: 10px; background: #fff; overflow: hidden; }
+.category-tile .category-image img { display: block; width: 100%; height: 100%; object-fit: contain; }
 .category-tile span:nth-child(2) { font-size: 12px; font-weight: 800; }
 .category-tile > svg { float: right; color: #d91b2f; }
 .listings-head { margin-top: 46px; }
@@ -176,6 +187,7 @@ button { cursor: pointer; }
 
 @media (max-width: 1120px) {
   .main-nav { gap: 15px; }.search-fields { grid-template-columns: repeat(3, 1fr); }.search-button { grid-column: span 3; }
+  .body-filter-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .category-grid { grid-template-columns: repeat(4, 1fr); }.cards-grid, .results-grid { grid-template-columns: repeat(3, 1fr); }
 }
 @media (max-width: 1000px) {
@@ -189,6 +201,7 @@ button { cursor: pointer; }
   .hero-content { padding-top: 44px; }.hero h1 { font-size: 38px; }.hero p { font-size: 14px; max-width: 310px; }.eyebrow { font-size: 9px; }.hero-points { flex-wrap: wrap; gap: 10px 17px; margin-top: 24px; font-size: 10px; }.hero-points svg { width: 19px; }
   .home-search { margin-top: -45px; }.search-panel { padding: 16px; }.search-fields { grid-template-columns: 1fr 1fr; gap: 11px; }.search-button { grid-column: span 2; }.search-fields select, .search-fields input { height: 44px; }
   .advanced-fields { grid-template-columns: 1fr 1fr; }.home-content { padding-top: 35px; }.section-head h2 { font-size: 22px; }
+  .body-filter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }.body-filter-option img { height: 105px; }
   .category-grid { grid-template-columns: repeat(2, 1fr); }.cards-grid, .results-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
   .car-photo { height: 130px; }.car-card-body { padding: 10px; }.car-card-body strong { font-size: 12px; }.car-meta { font-size: 10px; }.price { font-size: 15px; }
   .benefits { grid-template-columns: 1fr 1fr; }.detail-layout { grid-template-columns: 1fr; }.detail-photo { height: 360px; }.footer-inner { align-items: flex-start; flex-direction: column; }
@@ -198,7 +211,7 @@ button { cursor: pointer; }
   .compare-card-button { width: calc(100% - 20px); margin: 0 10px 10px; font-size: 11px; }.compare-bar { bottom: 74px; padding: 10px; }.compare-bar > button { padding: 9px; }
   .hero h1 { font-size: 33px; }.hero { height: 360px; }.hero-points span:last-child { display: none; }
   .search-fields { grid-template-columns: 1fr 1fr; }.search-fields label:nth-child(2) { grid-column: span 1; }.search-fields label:nth-child(5), .search-fields label:nth-child(6) { display: none; }.search-button { grid-column: span 2; }
-  .category-grid { grid-template-columns: repeat(2, 1fr); }.category-tile .category-image { height: 60px; }.category-car { height: 57px; }
+  .category-grid { grid-template-columns: repeat(2, 1fr); }.category-tile .category-image { height: 115px; }
   .cards-grid, .results-grid { grid-template-columns: 1fr 1fr; }.car-photo { height: 112px; }.image-label { font-size: 7px; }.favorite-button { width: 29px; height: 29px; }
   .car-card-body strong { white-space: normal; min-height: 31px; }.car-meta { min-height: 28px; }.benefits { padding: 18px; gap: 19px; }.benefits > div { display: block; }.benefits svg { margin-bottom: 7px; }
   .form-grid { grid-template-columns: 1fr; }.post-form { padding: 18px; }.detail-photo { height: 250px; }

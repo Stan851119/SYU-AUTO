@@ -45,28 +45,15 @@ const demoCars: Car[] = [
   { id: 6, make: "Mazda", model: "MX-5", title: "Mazda MX-5 Roadster", year: 2019, mileage: 48000, price: 22900, fuel: "Бензин", gearbox: "Ръчна", city: "Бургас", body: "Кабрио", photo: 5 },
 ];
 const categories = ["Хечбек", "Седан", "Комби", "SUV / Джип", "Купе", "Кабрио", "Бусове"];
-const categoryProfiles: Record<string, { body: string; glass: string; accent: string; wheels: [number, number] }> = {
-  "Хечбек": { body: "M8 52 Q10 47 20 46 L35 43 L49 28 Q54 23 63 23 L99 23 Q107 23 114 31 L127 44 L158 48 Q168 49 171 55 L170 62 L10 62 Z", glass: "M42 43 L53 30 Q56 27 63 27 L92 27 L90 43 Z M96 27 L100 27 Q107 28 112 34 L121 43 L95 43 Z", accent: "M46 44 H119", wheels: [42, 141] },
-  "Седан": { body: "M8 53 Q10 47 22 46 L41 43 L58 29 Q66 22 77 22 L111 22 Q122 22 131 31 L143 44 L160 47 Q170 49 172 55 L171 62 L9 62 Z", glass: "M48 43 L62 31 Q68 27 77 27 L94 27 L92 43 Z M99 27 L110 27 Q120 27 126 34 L136 43 L97 43 Z", accent: "M48 45 H140", wheels: [42, 143] },
-  "Комби": { body: "M8 54 Q10 48 21 46 L31 44 L38 27 Q41 21 51 21 L117 21 Q126 21 133 30 L143 44 L162 48 Q170 50 172 55 L171 63 L9 63 Z", glass: "M35 43 L43 28 Q45 25 52 25 L94 25 L93 43 Z M99 25 L116 25 Q124 25 129 33 L136 43 L98 43 Z", accent: "M37 45 H138", wheels: [43, 142] },
-  "SUV / Джип": { body: "M8 53 Q10 47 21 45 L30 43 L37 24 Q39 19 48 19 L115 19 Q124 19 131 27 L143 43 L162 47 Q171 49 173 55 L172 64 L9 64 Z", glass: "M35 42 L43 26 Q45 23 50 23 L91 23 L90 42 Z M97 23 L114 23 Q122 23 127 30 L136 42 L96 42 Z", accent: "M38 45 H140", wheels: [42, 144] },
-  "Купе": { body: "M7 55 Q9 49 23 47 L44 43 Q66 23 86 22 Q109 20 126 36 L137 44 L160 47 Q170 49 173 56 L171 62 L8 62 Z", glass: "M48 43 Q67 27 85 26 L93 26 L91 43 Z M99 26 Q111 28 123 40 L128 43 L96 43 Z", accent: "M47 45 Q86 47 134 45", wheels: [43, 144] },
-  "Кабрио": { body: "M7 55 Q9 49 23 47 L49 43 L67 42 L73 27 L78 27 L81 42 L134 42 L160 47 Q170 49 173 56 L171 62 L8 62 Z", glass: "M68 40 L75 30 L78 40 Z", accent: "M49 45 H136", wheels: [43, 144] },
-  "Бусове": { body: "M8 55 L12 27 Q13 16 24 16 L116 16 Q125 16 132 25 L144 44 L163 48 Q171 50 173 56 L172 64 L8 64 Z", glass: "M17 40 L18 26 Q18 21 25 21 L90 21 L90 40 Z M97 21 L115 21 Q123 21 128 29 L136 40 L97 40 Z", accent: "M17 44 H140", wheels: [42, 144] },
+const categoryImages: Record<string, string> = {
+  "Хечбек": "/category-hatchback.webp",
+  "Седан": "/category-sedan.webp",
+  "Комби": "/category-wagon.webp",
+  "SUV / Джип": "/category-suv.webp",
+  "Купе": "/category-coupe.webp",
+  "Кабрио": "/category-convertible.webp",
+  "Бусове": "/category-van.webp",
 };
-
-function CategoryCar({ category }: { category: string }) {
-  const profile = categoryProfiles[category];
-  const [rearWheel, frontWheel] = profile.wheels;
-  return <svg className="category-car" viewBox="0 0 180 80" fill="none" aria-hidden="true" focusable="false">
-    <path d={profile.body} fill="#263443" stroke="#14202d" strokeWidth="1.5" strokeLinejoin="round" />
-    <path d={profile.glass} fill="#b8c9d5" stroke="#e1eaf0" strokeWidth="1.2" strokeLinejoin="round" />
-    <path d={profile.accent} stroke="#e3293b" strokeWidth="1.7" strokeLinecap="round" />
-    <path d="M12 53 L21 51 M158 51 L169 54" stroke="#f45a65" strokeWidth="2.4" strokeLinecap="round" />
-    <path d="M61 49 H118" stroke="#697b8b" strokeWidth="1" strokeLinecap="round" opacity=".7" />
-    {[rearWheel, frontWheel].map((x) => <g key={x}><circle cx={x} cy="61" r="11" fill="#f0f2f5" /><circle cx={x} cy="61" r="8.5" fill="#14202d" /><circle cx={x} cy="61" r="4.4" fill="#9baab6" /><circle cx={x} cy="61" r="1.5" fill="#f0f2f5" /></g>)}
-  </svg>;
-}
 const euro = (n: number) => new Intl.NumberFormat("bg-BG").format(n) + " €";
 const number = (n: number) => new Intl.NumberFormat("bg-BG").format(n);
 const exteriorLabels: Record<Exterior, string> = { excellent: "Без забележки", normal: "Нормални следи от употреба", scratches: "Леки драскотини", dents: "Видими драскотини или вдлъбнатини", damage: "Сериозни външни забележки" };
@@ -258,10 +245,6 @@ export default function Home() {
   }
   function runSearch(event?: FormEvent) {
     event?.preventDefault();
-    navigate("results");
-  }
-  function categorySearch(body: string) {
-    setFilters({ ...initialFilters, body });
     navigate("results");
   }
   function toggleFavorite(id: number | string) {
@@ -514,8 +497,6 @@ export default function Home() {
       </div></div></section>
       <div className="home-search page-width" id="search">{SearchForm()}</div>
       <main className="page-width home-content">
-        <div className="section-head"><div><span className="section-kicker">РАЗГЛЕДАЙ ПАЗАРА</span><h2>Търси по категория</h2></div><button className="text-link" onClick={() => { setFilters(initialFilters); navigate("results"); }}>Всички обяви <Icon name="arrow" size={17} /></button></div>
-        <div className="category-grid">{categories.map((category) => <button key={category} className="category-tile" onClick={() => categorySearch(category)}><span className="category-image"><CategoryCar category={category} /></span><span>{category}</span><Icon name="arrow" size={16} /></button>)}</div>
         <section className="valuation-promo"><div><span className="section-kicker">НОВО В MMC AUTO</span><h2>Колко струва твоята кола?</h2><p>Въведи година, пробег и външни забележки за ориентировъчен диапазон.</p></div><button className="primary-button" onClick={() => navigate("valuation")}>Оцени кола <Icon name="arrow" size={17} /></button></section>
         <div className="section-head listings-head"><div><span className="section-kicker">ПЪРВА ВЕРСИЯ</span><h2>{marketplace ? "Последни обяви" : "Примерни обяви"}</h2><p>{marketplace ? "Обявите се показват след преглед." : "Данните и снимките тук са демонстрационни."}</p></div><button className="text-link" onClick={() => { setFilters(initialFilters); navigate("results"); }}>Виж всички <Icon name="arrow" size={17} /></button></div>
         {cars.length ? <div className="cards-grid">{cars.slice(0, 4).map((car) => <CarCard car={car} key={car.id} />)}</div> : <div className="empty-state"><Icon name="car" size={36} /><h2>Очакваме първите обяви</h2><p>Публикуваните след преглед автомобили ще се появят тук.</p></div>}
@@ -594,8 +575,8 @@ export default function Home() {
       <label>Гориво<select value={filters.fuel} onChange={(e) => updateFilter("fuel", e.target.value)}><option value="">Всички</option>{["Бензин", "Дизел", "Хибрид", "Електрически"].map((fuel) => <option key={fuel}>{fuel}</option>)}</select></label>
       <label>Град<select value={filters.city} onChange={(e) => updateFilter("city", e.target.value)}><option value="">Всички градове</option>{[...new Set(cars.map((car) => car.city))].sort().map((city) => <option key={city}>{city}</option>)}</select></label>
       <button className="search-button" type="submit"><Icon name="search" size={19} /> Търси {matches.length} {matches.length === 1 ? "обява" : "обяви"}</button>
-    </div><div className="search-bottom"><button type="button" onClick={() => setAdvanced(!advanced)}><Icon name="sliders" size={16} /> Разширено търсене <Icon name="chevron" size={15} /></button>{Object.values(filters).some(Boolean) && <button type="button" onClick={() => setFilters(initialFilters)}>Изчисти филтрите</button>}</div>
-    {advanced && <div className="advanced-fields"><label>Купе<select value={filters.body} onChange={(e) => updateFilter("body", e.target.value)}><option value="">Всички категории</option>{categories.map((body) => <option key={body}>{body}</option>)}</select></label><label>Година от<input type="number" min="1950" max="2030" placeholder="Година" value={filters.year} onChange={(e) => updateFilter("year", e.target.value)} /></label><label>Скоростна кутия<select value={filters.gearbox} onChange={(e) => updateFilter("gearbox", e.target.value)}><option value="">Всички</option><option>Ръчна</option><option>Автоматична</option></select></label><label>Екологична категория<select value={filters.emissionClass} onChange={(e) => updateFilter("emissionClass", e.target.value)}><option value="">Всички</option>{[...emissionClasses, zeroEmissions].map((value) => <option key={value}>{value}</option>)}</select></label></div>}
+    </div><div className="search-bottom"><button type="button" onClick={() => setAdvanced(!advanced)} aria-expanded={advanced}><Icon name="sliders" size={16} /> Разширено търсене · Тип автомобил <Icon name="chevron" size={15} /></button>{Object.values(filters).some(Boolean) && <button type="button" onClick={() => setFilters(initialFilters)}>Изчисти филтрите</button>}</div>
+    {advanced && <><div className="body-filter"><div className="body-filter-head"><strong>Тип автомобил</strong><button type="button" onClick={() => updateFilter("body", "")} className={!filters.body ? "selected" : ""}>Всички</button></div><div className="body-filter-grid">{categories.map((category) => <button type="button" key={category} className={`body-filter-option${filters.body === category ? " selected" : ""}`} aria-pressed={filters.body === category} onClick={() => updateFilter("body", filters.body === category ? "" : category)}><img src={categoryImages[category]} alt="" loading="lazy" /><span>{category}</span></button>)}</div></div><div className="advanced-fields"><label>Година от<input type="number" min="1950" max="2030" placeholder="Година" value={filters.year} onChange={(e) => updateFilter("year", e.target.value)} /></label><label>Скоростна кутия<select value={filters.gearbox} onChange={(e) => updateFilter("gearbox", e.target.value)}><option value="">Всички</option><option>Ръчна</option><option>Автоматична</option></select></label><label>Екологична категория<select value={filters.emissionClass} onChange={(e) => updateFilter("emissionClass", e.target.value)}><option value="">Всички</option>{[...emissionClasses, zeroEmissions].map((value) => <option key={value}>{value}</option>)}</select></label><button type="submit" className="advanced-search-submit">Покажи {matches.length} {matches.length === 1 ? "обява" : "обяви"} <Icon name="arrow" size={16} /></button></div></>}
     </form>;
   }
 }
