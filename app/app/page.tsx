@@ -120,17 +120,30 @@ function PriceGuide({ car, catalog, demo }: { car: Car; catalog: Car[]; demo: bo
     <p>Ще покажем сравнение, когато има поне 3 сходни обяви за този модел.</p>
   </section>;
   const ratio = car.price / guide.mid;
-  const level = ratio < 0.9 ? "Ниска спрямо ориентира" : ratio > 1.1 ? "Висока спрямо ориентира" : "Близка до ориентира";
-  const color = ratio < 0.9 ? "#166534" : ratio > 1.1 ? "#9f1239" : "#805800";
-  const position = Math.max(3, Math.min(97, 50 + (ratio - 1) * 170));
+  const level = ratio < 0.9 ? "Изгодна цена" : ratio > 1.1 ? "Над ориентира" : "Близка до средната";
+  const color = ratio < 0.9 ? "#17734a" : ratio > 1.1 ? "#b75235" : "#28754b";
+  const needleAngle = Math.max(-82, Math.min(82, (ratio - 1) * 300));
+  const arc = (start: number, end: number) => {
+    const point = (degrees: number) => ({ x: 120 + 96 * Math.cos(degrees * Math.PI / 180), y: 116 + 96 * Math.sin(degrees * Math.PI / 180) });
+    const from = point(start);
+    const to = point(end);
+    return `M ${from.x} ${from.y} A 96 96 0 0 1 ${to.x} ${to.y}`;
+  };
   return <section className="price-guide" aria-label="Ориентир за цената">
     <strong>Ориентир за цената</strong>
-    <div className="price-guide-heading"><span style={{ color }}>{level}</span><b>{euro(car.price)}</b></div>
-    <div className="price-guide-meter" role="img" aria-label={level}>
-      <div className="price-guide-bands"><span /><span /><span /></div>
-      <span className="price-guide-marker" style={{ left: `${position}%` }} />
+    <div className="price-guide-summary">
+      <div><b>{euro(car.price)}</b><p>Обявена цена</p></div>
+      <div className="price-guide-gauge" role="img" aria-label={`${level}: ${euro(car.price)} при ориентир ${euro(guide.mid)}`}>
+        <svg viewBox="0 0 240 125" aria-hidden="true" focusable="false">
+          <path d={arc(180, 222)} stroke="#83d5a2" />
+          <path d={arc(225, 267)} stroke="#2c8550" />
+          <path d={arc(270, 312)} stroke="#f0c663" />
+          <path d={arc(315, 360)} stroke="#ef9b6c" />
+          <g transform={`rotate(${needleAngle} 120 116)`}><path className="price-guide-needle" d="M120 30 L113 110 Q113 119 120 119 Q127 119 127 110 Z" /></g>
+        </svg>
+        <span className="price-guide-verdict" style={{ backgroundColor: color }}>{level}</span>
+      </div>
     </div>
-    <div className="price-guide-labels"><span>Ниска</span><span>Средна</span><span>Висока</span></div>
     <p>Ориентир: {euro(guide.mid)} · приблизителен диапазон {euro(guide.low)} – {euro(guide.high)}.</p>
     <small>Сравнени са {guide.count} {demo ? "примерни" : "активни"} обяви за същия модел, гориво и скоростна кутия с близки година и пробег. Това са обявени, а не продажни цени; оборудването и техническото състояние не са отчетени.</small>
   </section>;

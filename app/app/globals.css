@@ -142,17 +142,18 @@ button { cursor: pointer; }
 .seller-contact-message { color: #d7192d; background: #fff; border: 2px solid #d7192d; }
 .seller-contact-message:hover { background: #fff3f4; }
 .seller-contact-dock { display: none; }
-.price-guide { margin-top: 18px; border: 1px solid #e2e7ec; border-radius: 11px; padding: 18px; background: #f8fafc; }
-.price-guide > strong { display: block; font-size: 15px; color: #243040; }
-.price-guide-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; font-size: 14px; font-weight: 750; }
-.price-guide-heading b { white-space: nowrap; color: #243040; }
-.price-guide-meter { position: relative; margin: 18px 5px 0; }
-.price-guide-bands { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; height: 12px; overflow: hidden; border-radius: 8px; }
-.price-guide-bands span:nth-child(1) { background: #79cb99; }.price-guide-bands span:nth-child(2) { background: #f4c65d; }.price-guide-bands span:nth-child(3) { background: #ec8f8a; }
-.price-guide-marker { position: absolute; top: -5px; width: 4px; height: 22px; background: #17253b; border: 2px solid white; border-radius: 4px; box-shadow: 0 0 0 1px #17253b; transform: translateX(-50%); }
-.price-guide-labels { display: flex; justify-content: space-between; margin-top: 8px; font-size: 11px; color: #596473; }
-.price-guide p { margin: 10px 0 0; font-size: 12px; line-height: 1.5; color: #566372; }
-.price-guide small { display: block; margin-top: 8px; font-size: 11px; line-height: 1.5; color: #677384; }
+.price-guide { margin-top: 18px; border: 1px solid #e2e7ec; border-radius: 12px; padding: 20px; background: #f8fafc; }
+.price-guide > strong { display: block; font-size: 16px; color: #243040; }
+.price-guide-summary { display: grid; grid-template-columns: minmax(0, 1fr) minmax(120px, 180px); align-items: center; gap: 12px; margin-top: 10px; }
+.price-guide-summary b { color: #18253a; font-size: clamp(19px, 4vw, 24px); white-space: nowrap; }
+.price-guide-summary p { margin: 3px 0 0; color: #596473; font-size: 14px; }
+.price-guide-gauge { text-align: center; min-width: 0; }
+.price-guide-gauge svg { display: block; width: 100%; height: auto; }
+.price-guide-gauge svg > path { fill: none; stroke-width: 11; }
+.price-guide-gauge .price-guide-needle { fill: #68717c; stroke: none; }
+.price-guide-verdict { display: block; margin-top: -8px; padding: 7px 5px; border-radius: 7px; color: #fff; font-size: 13px; font-weight: 750; line-height: 1.2; }
+.price-guide > p { margin: 15px 0 0; font-size: 14px; line-height: 1.5; color: #485468; }
+.price-guide small { display: block; margin-top: 9px; font-size: 12px; line-height: 1.5; color: #677384; }
 .spec-grid { border-top: 1px solid #e8eaf0; margin-top: 25px; padding-top: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 22px 14px; }
 .spec-grid span { display: flex; flex-direction: column; gap: 6px; color: #7d8694; font-size: 12px; }.spec-grid strong { font-size: 14px; color: #242c38; }
 .wide { width: 100%; margin-top: 27px; }.detail-hint { margin-top: 13px; font-size: 12px; line-height: 1.45; color: #7c8591; }
