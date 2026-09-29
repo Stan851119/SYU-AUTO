@@ -20,6 +20,7 @@ export type ListingRow = {
   co2_g_km: number | null;
   body: string;
   city: string;
+  contact_phone: string | null;
   details: string;
   photo_paths: string[];
   status: "draft" | "pending" | "active" | "archived";
@@ -60,7 +61,7 @@ async function withImages(rows: ListingRow[]) {
 export async function loadActiveListings() {
   if (!marketplace) return [];
   const { data, error } = await marketplace.from("car_listings")
-    .select("id,seller_id,make,model,year,mileage_km,price_eur,fuel,gearbox,emission_class,co2_g_km,body,city,details,photo_paths,status")
+    .select("id,seller_id,make,model,year,mileage_km,price_eur,fuel,gearbox,emission_class,co2_g_km,body,city,contact_phone,details,photo_paths,status")
     .eq("status", "active").order("created_at", { ascending: false }).limit(60);
   if (error) throw error;
   return withImages((data || []) as ListingRow[]);
@@ -69,7 +70,7 @@ export async function loadActiveListings() {
 export async function loadMyListings(sellerId: string) {
   if (!marketplace) return [];
   const { data, error } = await marketplace.from("car_listings")
-    .select("id,seller_id,make,model,year,mileage_km,price_eur,fuel,gearbox,emission_class,co2_g_km,body,city,details,photo_paths,status")
+    .select("id,seller_id,make,model,year,mileage_km,price_eur,fuel,gearbox,emission_class,co2_g_km,body,city,contact_phone,details,photo_paths,status")
     .eq("seller_id", sellerId).order("created_at", { ascending: false }).limit(100);
   if (error) throw error;
   return withImages((data || []) as ListingRow[]);
@@ -78,7 +79,7 @@ export async function loadMyListings(sellerId: string) {
 export async function loadPendingListings() {
   if (!marketplace) return [];
   const { data, error } = await marketplace.from("car_listings")
-    .select("id,seller_id,make,model,year,mileage_km,price_eur,fuel,gearbox,emission_class,co2_g_km,body,city,details,photo_paths,status")
+    .select("id,seller_id,make,model,year,mileage_km,price_eur,fuel,gearbox,emission_class,co2_g_km,body,city,contact_phone,details,photo_paths,status")
     .eq("status", "pending").order("created_at", { ascending: true }).limit(100);
   if (error) throw error;
   return withImages((data || []) as ListingRow[]);
