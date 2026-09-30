@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { LegalLinks } from "../../components/LegalPage";
 
 export const metadata: Metadata = {
   title: "Контакти",
@@ -23,6 +24,7 @@ export default function ContactPage() {
             <a href="tel:+359878255677" style={{ color: "#d7192d", textDecoration: "none" }}>+359 87 825 5677</a>
           </p>
         </div>
+        <LegalLinks />
       </section>
     </main>
   );
