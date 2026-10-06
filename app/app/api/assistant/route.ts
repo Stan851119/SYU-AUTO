@@ -4,8 +4,6 @@ import { readLimitedJson, RequestError } from "../../../lib/request-security";
 
 export const runtime = "nodejs";
 
-const calls = new Map<string, { count: number; resetAt: number }>();
-
 export async function POST(request: NextRequest) {
   const origin = request.headers.get("origin");
   if (origin && origin !== request.nextUrl.origin) {
@@ -27,7 +25,7 @@ export async function POST(request: NextRequest) {
 
   const bearer = request.headers.get("authorization")?.match(/^Bearer (.+)$/)?.[1];
   if (!bearer) return NextResponse.json({ error: "Влез в профила си, за да ползваш ИИ асистента." }, { status: 401 });
-  const supabase = createClient(url, anonKey, { auth: { persistSession: false } });
+  const supabase = createClient(url, anonKey, { global: { headers: { Authorization: `Bearer ${bearer}` } }, auth: { persistSession: false } });
   const { data: auth, error: authError } = await supabase.auth.getUser(bearer);
   if (authError || !auth.user) return NextResponse.json({ error: "Сесията е изтекла." }, { status: 401 });
 
@@ -35,16 +33,9 @@ export async function POST(request: NextRequest) {
   const message = typeof body?.message === "string" ? body.message.trim() : "";
   if (!message || message.length > 500) return NextResponse.json({ error: "Напиши въпрос до 500 знака." }, { status: 400 });
 
-  const now = Date.now();
-  for (const [id, entry] of calls) if (entry.resetAt <= now) calls.delete(id);
-  if (!calls.has(auth.user.id) && calls.size >= 10000) {
-    return NextResponse.json({ error: "Услугата е заета. Опитай по-късно." }, { status: 503 });
-  }
-  const usage = calls.get(auth.user.id);
-  const current = usage && usage.resetAt > now ? usage : { count: 0, resetAt: now + 3_600_000 };
-  if (current.count >= 5) return NextResponse.json({ error: "Достигнат е лимитът от 5 въпроса за час." }, { status: 429 });
-  current.count++;
-  calls.set(auth.user.id, current);
+  const { data: allowed, error: quotaError } = await supabase.rpc("consume_marketplace_quota", { action: "assistant" });
+  if (quotaError) return NextResponse.json({ error: "Проверката временно не е достъпна." }, { status: 503 });
+  if (!allowed) return NextResponse.json({ error: "Достигнат е лимитът от 5 въпроса за час." }, { status: 429 });
 
   const history = Array.isArray(body.history) ? body.history.slice(-6).filter((turn): turn is { role: "user" | "assistant"; content: string } =>
     !!turn && (turn.role === "user" || turn.role === "assistant") && typeof turn.content === "string" && turn.content.length <= 500) : [];
