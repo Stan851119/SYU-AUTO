@@ -11,8 +11,9 @@ Implemented and deployed:
 Validation:
 - Production npm audit: zero runtime advisories at review time. TypeScript and production build pass; four request parsing tests pass.
 - Four decoder/body tests pass: PNG/JPEG/WebP acceptance, appended payload removal, spoofed/corrupt images rejected, oversized streamed bodies rejected and excessive pixel count rejected.
-- Database quota tested in a rolled-back authenticated transaction: requests 1–5 accepted, request 6 denied. Listing transition and namespace checks were tested previously.
+- Database quota tested in a rolled-back authenticated transaction: requests 1–5 accepted, request 6 denied. Five listing inserts succeed and the sixth is blocked in a rolled-back transaction. Listing transition and namespace checks were tested previously.
 - First complete backup succeeded; subsequent readback/checksum/archive restoration verification succeeded.
+- Deployed decoder smoke test returned HTTP 200 with a freshly encoded JPEG using a fixed public fixture and no administrative operations; temporary test function was disabled afterward.
 - Positive authenticated upload through the deployed function has not been verified with an owner session. An administrative production integration-test route was rejected by automatic approval review and was never deployed.
 
 Remaining owner actions and limitations:
@@ -20,7 +21,7 @@ Remaining owner actions and limitations:
 - Administrator/provider MFA requires owner enrollment. Administrator step-up enforcement is not enabled.
 - Account quotas reduce abuse but do not replace CAPTCHA, a hosting firewall or protection against attackers creating many accounts. These have not been configured.
 - Image normalization is not a signature-based antivirus scanner. Existing photos predate this processing pipeline.
-- Supabase leaked-password protection requires a paid plan; no plan change purchased.
+- [Supabase leaked-password protection](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection) requires a paid plan; no plan change purchased.
 - Tailwind 3 development-tool advisories remain; a forced incompatible major upgrade was not applied.
 - Storage capacity must be monitored as immutable photo backups accumulate. Inspect private.backup_runs and cron.job_run_details for failures. Scheduled jobs failing at runtime do not currently notify the owner automatically.
 
