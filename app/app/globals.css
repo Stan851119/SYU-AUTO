@@ -246,3 +246,8 @@ button { cursor: pointer; }
   .assistant-launch { width: 54px; height: 54px; padding: 0; justify-content: center; }
   .assistant-launch span { display: none; }
 }
+
+.auth-modes { display: flex; gap: 8px; margin-bottom: 22px; padding: 5px; border-radius: 9px; background: #f3f5f8; }
+.auth-modes button { flex: 1; min-width: 0; padding: 12px 8px; border: 0; border-radius: 6px; background: transparent; color: #394454; font-size: 14px; font-weight: 750; }
+.auth-modes button[aria-pressed="true"] { background: #e5192e; color: white; }
+.auth-modes button:focus-visible { outline: 2px solid #e5192e; outline-offset: 3px; }
