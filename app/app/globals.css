@@ -251,3 +251,18 @@ button { cursor: pointer; }
 .auth-modes button { flex: 1; min-width: 0; padding: 12px 8px; border: 0; border-radius: 6px; background: transparent; color: #394454; font-size: 14px; font-weight: 750; }
 .auth-modes button[aria-pressed="true"] { background: #e5192e; color: white; }
 .auth-modes button:focus-visible { outline: 2px solid #e5192e; outline-offset: 3px; }
+
+.listing-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.edit-listing { margin-top: 7px; padding: 8px 11px; border: 1px solid #344052; border-radius: 5px; background: #fff; color: #344052; font: inherit; font-size: 13px; font-weight: 700; }
+.edit-listing:disabled { opacity: .5; }
+.listing-editor { margin-top: 28px; scroll-margin-top: 20px; }
+.editor-heading { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; align-items: center; margin-bottom: 18px; }
+.editor-heading h2 { margin: 0; font-size: 21px; }
+.listing-fields { border: 0; padding: 0; margin: 18px 0 0; min-width: 0; }
+.existing-photos { margin-top: 22px; }
+.existing-photos h3 { font-size: 14px; color: #394454; }
+.edit-photo-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 12px; }
+.edit-photo { min-width: 0; border: 1px solid #e3e7ed; border-radius: 8px; overflow: hidden; }
+.edit-photo img { display: block; width: 100%; height: 100px; object-fit: cover; }
+.edit-photo span { display: grid; min-height: 100px; place-items: center; font-size: 13px; }
+.edit-photo button { width: 100%; padding: 9px; border: 0; background: #fff; color: #a9162a; font-size: 12px; font-weight: 700; }
