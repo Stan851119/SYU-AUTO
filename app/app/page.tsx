@@ -60,6 +60,23 @@ const euro = (n: number) => new Intl.NumberFormat("bg-BG").format(n) + " €";
 const number = (n: number) => new Intl.NumberFormat("bg-BG").format(n);
 const exteriorLabels: Record<Exterior, string> = { excellent: "Без забележки", normal: "Нормални следи от употреба", scratches: "Леки драскотини", dents: "Видими драскотини или вдлъбнатини", damage: "Сериозни външни забележки" };
 
+const socialProfiles: { name: string; icon: string; href?: string }[] = [
+  { name: "Instagram", icon: "instagram" },
+  { name: "TikTok", icon: "tiktok" },
+  { name: "Facebook", icon: "facebook" },
+  { name: "YouTube", icon: "youtube" },
+];
+
+function SocialIcon({ name }: { name: string }) {
+  const paths: Record<string, React.ReactNode> = {
+    instagram: <><rect x="3" y="3" width="18" height="18" rx="5" fill="none" stroke="currentColor" strokeWidth="2" /><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" strokeWidth="2" /><circle cx="17.5" cy="6.5" r="1.3" /></>,
+    tiktok: <path d="M15 2h3c.4 2.5 1.8 4 4 4.5v3a9 9 0 0 1-4-1.5v8a6 6 0 1 1-6-6v3a3 3 0 1 0 3 3V2Z" />,
+    facebook: <path d="M14 22v-9h3l.5-4H14V7c0-1.2.4-2 2-2h2V1.5c-.7-.1-1.8-.3-3-.3-3.4 0-5 2-5 5.4V9H7v4h3v9h4Z" />,
+    youtube: <><rect x="2" y="5" width="20" height="14" rx="4" /><path d="m10 8 6 4-6 4V8Z" fill="#0c111a" /></>,
+  };
+  return <svg width="25" height="25" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">{paths[name]}</svg>;
+}
+
 function Icon({ name, size = 20, fill = "none" }: { name: string; size?: number; fill?: string }) {
   const paths: Record<string, React.ReactNode> = {
     search: <><circle cx="11" cy="11" r="7" /><path d="m16 16 5 5" /></>,
@@ -709,7 +726,7 @@ export default function Home() {
       </section>}
     </main>}
 
-    <footer className="site-footer"><div className="page-width footer-inner"><div><strong><em>MMC</em> AUTO</strong><p>Автомобили в България.</p></div><div><button onClick={() => navigate("home")}>Начало</button><button onClick={() => { setFilters(initialFilters); navigate("results"); }}>Обяви</button><button onClick={() => navigate("valuation")}>Оцени и продай</button><button onClick={() => navigate("post")}>Моят профил</button><a href="/contact">Контакти</a></div><small>© 2026 MMC AUTO</small></div></footer>
+    <footer className="site-footer"><div className="page-width footer-inner"><div><strong><em>MMC</em> AUTO</strong><p>Автомобили в България.</p></div><div><button onClick={() => navigate("home")}>Начало</button><button onClick={() => { setFilters(initialFilters); navigate("results"); }}>Обяви</button><button onClick={() => navigate("valuation")}>Оцени и продай</button><button onClick={() => navigate("post")}>Моят профил</button><a href="/contact">Контакти</a></div><small>© 2026 MMC AUTO</small></div><section className="page-width footer-social" aria-labelledby="footer-social-title"><h2 id="footer-social-title">Следвай ни</h2><p>MMC Auto и в социалните мрежи.</p><div className="footer-social-links">{socialProfiles.map((profile) => <div className="footer-social-item" key={profile.name}>{profile.href ? <a className="footer-social-icon" href={profile.href} target="_blank" rel="noopener noreferrer" aria-label={`Следвай MMC Auto в ${profile.name}`}><SocialIcon name={profile.icon} /></a> : <span className="footer-social-icon social-coming-soon" title="Официалният профил предстои"><SocialIcon name={profile.icon} /></span>}<span>{profile.name}</span></div>)}</div>{!socialProfiles.some((profile) => profile.href) && <small className="footer-social-note">Линковете към официалните ни профили предстоят.</small>}</section></footer>
     {comparedCars.length > 0 && view !== "compare" && <div className="compare-bar" role="status"><div><strong>{comparedCars.length} / 3 автомобила</strong><span>{comparedCars.length < 2 ? "Добави още един за сравнение" : comparedCars.map((car) => car.make + " " + car.model).join(" · ")}</span></div><button onClick={() => navigate("compare")} disabled={comparedCars.length < 2}>Сравни сега <Icon name="arrow" size={16} /></button>{notice && <p>{notice}</p>}</div>}
     <button className="assistant-launch" onClick={() => setAssistantOpen((old) => !old)} aria-label={assistantOpen ? "Затвори асистента" : "Отвори асистента"}><Icon name={assistantOpen ? "close" : "spark"} size={23} /><span>{assistantOpen ? "Затвори" : "Попитай MMC"}</span></button>
     {assistantOpen && <section className="assistant-panel" aria-label="MMC асистент"><div className="assistant-head"><div><strong>MMC помощник</strong><small>{marketplace && user ? "ИИ при свързана услуга · демо при липса на връзка" : "Демо насоки за обявите"}</small></div><button onClick={() => setAssistantOpen(false)} aria-label="Затвори"><Icon name="close" size={18} /></button></div><div className="assistant-messages" role="log" aria-live="polite">{chat.map((entry, index) => <div key={index} className={`assistant-message ${entry.role === "user" ? "from-user" : ""}`}>{entry.content}{entry.demo && <small>Демо отговор</small>}</div>)}{assistantBusy && <p>Подготвям отговор…</p>}</div><form className="assistant-input" onSubmit={askAssistant}><input aria-label="Въпрос към асистента" maxLength={500} value={assistantInput} onChange={(event) => setAssistantInput(event.target.value)} placeholder="Напр. Toyota до 22 000 €" /><button type="submit" disabled={assistantBusy || !assistantInput.trim()} aria-label="Изпрати въпроса"><Icon name="arrow" size={20} /></button></form></section>}
