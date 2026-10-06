@@ -168,6 +168,9 @@ export default function Home() {
   const [email, setEmail] = useState("");
   const [authMode, setAuthMode] = useState<"login" | "register">("login");
   const [photos, setPhotos] = useState<File[]>([]);
+  const [editingListing, setEditingListing] = useState<ListingRow | null>(null);
+  const [retainedPhotos, setRetainedPhotos] = useState<{ path: string; url?: string }[]>([]);
+  const [photoInputVersion, setPhotoInputVersion] = useState(0);
   const [busy, setBusy] = useState(false);
   const [listingError, setListingError] = useState("");
   const [valuationForm, setValuationForm] = useState<{ make: string; model: string; year: string; mileage: string; fuel: string; gearbox: string; exterior: Exterior }>({ make: "", model: "", year: "", mileage: "", fuel: "", gearbox: "", exterior: "normal" });
@@ -184,6 +187,10 @@ export default function Home() {
   const [mobileMenu, setMobileMenu] = useState(false);
   const [notice, setNotice] = useState("");
   const [draftForm, setDraftForm] = useState({ make: "", model: "", year: "", mileage: "", price: "", fuel: "Бензин", gearbox: "Ръчна", emissionClass: "", co2GKm: "", city: "", body: "Седан", details: "", contactPhone: "" });
+
+  useEffect(() => {
+    if (editingListing && user?.id !== editingListing.seller_id) resetListingForm();
+  }, [user, editingListing]);
 
   useEffect(() => {
     try {
@@ -364,9 +371,42 @@ export default function Home() {
     setBusy(false);
   }
 
+  function resetListingForm() {
+    setEditingListing(null);
+    setRetainedPhotos([]);
+    setPhotos([]);
+    setPhotoInputVersion((old) => old + 1);
+    setDraftForm({ make: "", model: "", year: "", mileage: "", price: "", fuel: "Бензин", gearbox: "Ръчна", emissionClass: "", co2GKm: "", city: "", body: "Седан", details: "", contactPhone: "" });
+  }
+
+  async function startEditingListing(row: ListingRow) {
+    if (!marketplace || !user || row.seller_id !== user.id || row.status === "archived" || busy) return;
+    if (editingListing && !window.confirm("Да заменим ли незаписаните промени с избраната обява?")) return;
+    setBusy(true); setListingError(""); setNotice("");
+    try {
+      const images = await Promise.all(row.photo_paths.map(async (path) => {
+        const { data } = await marketplace.storage.from("car-photos").createSignedUrl(path, 3600);
+        return { path, url: data?.signedUrl };
+      }));
+      setEditingListing(row);
+      setRetainedPhotos(images);
+      setPhotos([]); setPhotoInputVersion((old) => old + 1);
+      setDraftForm({ make: row.make, model: row.model, year: String(row.year), mileage: String(row.mileage_km),
+        price: String(row.price_eur), fuel: row.fuel, gearbox: row.gearbox, emissionClass: row.emission_class || "",
+        co2GKm: row.co2_g_km == null ? "" : String(row.co2_g_km), city: row.city, body: row.body,
+        details: row.details, contactPhone: row.contact_phone || "" });
+      setTimeout(() => document.getElementById("listing-editor")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+    } catch { setListingError("Не успяхме да отворим обявата за редактиране. Опитай отново."); }
+    finally { setBusy(false); }
+  }
+
   async function saveLiveListing(event: FormEvent) {
     event.preventDefault();
     if (!marketplace || !user || busy) return;
+    if (editingListing && editingListing.seller_id !== user.id) return;
+    if (retainedPhotos.length + photos.length > 8) {
+      setListingError("Обявата може да има до 8 снимки. Премахни някоя преди да запишеш."); return;
+    }
     const enteredPhone = draftForm.contactPhone.replace(/[\s()-]/g, "");
     const contactPhone = enteredPhone.startsWith("0") ? `+359${enteredPhone.slice(1)}` : enteredPhone;
     if (contactPhone && !/^\+[1-9][0-9]{7,14}$/.test(contactPhone)) {
@@ -374,34 +414,49 @@ export default function Home() {
       return;
     }
     setBusy(true); setListingError(""); setNotice("");
+    const uploadedPaths: string[] = [];
     try {
-      const { data, error } = await marketplace.from("car_listings").insert({
-        seller_id: user.id, make: draftForm.make.trim(), model: draftForm.model.trim(),
+      const fields = {
+        make: draftForm.make.trim(), model: draftForm.model.trim(),
         year: Number(draftForm.year), mileage_km: Number(draftForm.mileage), price_eur: Number(draftForm.price),
         fuel: draftForm.fuel, gearbox: draftForm.gearbox,
         emission_class: draftForm.fuel === "Електрически" ? zeroEmissions : draftForm.emissionClass || null,
         co2_g_km: draftForm.fuel === "Електрически" ? 0 : draftForm.co2GKm === "" ? null : Number(draftForm.co2GKm),
         city: draftForm.city.trim(), body: draftForm.body, contact_phone: contactPhone || null,
-        details: draftForm.details.trim(), status: "draft"
-      }).select("id").single();
-      if (error || !data) throw error || new Error("Обявата не е запазена.");
-      const paths: string[] = [];
+        details: draftForm.details.trim()
+      };
+      let listingId = editingListing?.id;
+      if (!listingId) {
+        const { data, error } = await marketplace.from("car_listings").insert({ ...fields, seller_id: user.id, status: "draft" }).select("id").single();
+        if (error || !data) throw error || new Error("Обявата не е запазена.");
+        listingId = data.id;
+      }
+      const paths: string[] = retainedPhotos.map((photo) => photo.path);
       for (const file of photos) {
         const extension = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
-        const path = `${user.id}/${data.id}/${crypto.randomUUID()}.${extension}`;
+        const path = `${user.id}/${listingId}/${crypto.randomUUID()}.${extension}`;
         const uploaded = await marketplace.storage.from("car-photos").upload(path, file, { contentType: file.type, upsert: false });
         if (uploaded.error) throw uploaded.error;
-        paths.push(path);
+        paths.push(path); uploadedPaths.push(path);
       }
-      const updated = await marketplace.from("car_listings").update({ photo_paths: paths, status: "pending" }).eq("id", data.id).select("id").single();
-      if (updated.error) throw updated.error;
-      setPhotos([]);
-      setDraftForm({ make: "", model: "", year: "", mileage: "", price: "", fuel: "Бензин", gearbox: "Ръчна", emissionClass: "", co2GKm: "", city: "", body: "Седан", details: "", contactPhone: "" });
-      try { setMyListings(await loadMyListings(user.id)); }
+      let update = marketplace.from("car_listings").update({ ...fields, photo_paths: paths, status: "pending" })
+        .eq("id", listingId).eq("seller_id", user.id);
+      if (editingListing) update = update.eq("updated_at", editingListing.updated_at).eq("status", editingListing.status);
+      const updated = await update.select("id").single();
+      if (updated.error) throw new Error(editingListing && updated.error.code === "PGRST116"
+        ? "Обявата е променена междувременно. Презареди страницата и отвори редакцията отново." : updated.error.message);
+      uploadedPaths.length = 0;
+      setLiveCars((old) => old.filter((car) => car.id !== listingId));
+      resetListingForm();
+      try {
+        const [own, pending] = await Promise.all([loadMyListings(user.id), user.app_metadata?.role === "admin" ? loadPendingListings() : Promise.resolve([])]);
+        setMyListings(own); setPendingListings(pending);
+      }
       catch { setListingError("Обявата е изпратена, но списъкът в профила не се обнови. Презареди страницата."); }
-      setNotice("Обявата е изпратена за преглед. Ще се вижда публично след одобрение.");
+      setNotice(editingListing ? "Промените са запазени. Обявата чака повторно одобрение и временно не се вижда публично." : "Обявата е изпратена за преглед. Ще се вижда публично след одобрение.");
     } catch (error) {
-      setListingError(`Не успяхме да изпратим обявата: ${error instanceof Error ? error.message : "Опитай отново."} Ако е създадена чернова, тя остава в профила ти.`);
+      if (uploadedPaths.length) await marketplace.storage.from("car-photos").remove(uploadedPaths).catch(() => { /* Unreferenced uploads remain private if cleanup fails. */ });
+      setListingError(`${editingListing ? "Не успяхме да запазим промените" : "Не успяхме да изпратим обявата"}: ${error instanceof Error ? error.message : "Опитай отново."}`);
     } finally { setBusy(false); }
   }
 
@@ -436,6 +491,7 @@ export default function Home() {
       : await marketplace.from("car_listings").delete().eq("id", row.id).eq("seller_id", user.id).in("status", ["draft", "pending"]).select("id").single();
     if (result.error) setListingError(`Не успяхме да премахнем обявата: ${result.error.message}`);
     else {
+      if (editingListing?.id === row.id) resetListingForm();
       setMyListings((old) => published ? old.map((item) => item.id === row.id ? { ...item, status: "archived" } : item) : old.filter((item) => item.id !== row.id));
       setLiveCars((old) => old.filter((item) => item.id !== row.id));
       setNotice(published ? "Обявата е свалена от сайта." : "Обявата е изтрита.");
@@ -445,7 +501,7 @@ export default function Home() {
 
   function selectPhotos(files: FileList | null) {
     const chosen = Array.from(files || []);
-    if (chosen.length > 8 || chosen.some((file) => file.size > 5 * 1024 * 1024 || !["image/jpeg", "image/png", "image/webp"].includes(file.type))) {
+    if (chosen.length + retainedPhotos.length > 8 || chosen.some((file) => file.size > 5 * 1024 * 1024 || !["image/jpeg", "image/png", "image/webp"].includes(file.type))) {
       setListingError("Добави до 8 снимки във формат JPG, PNG или WebP, всяка до 5 MB.");
       setPhotos([]); return;
     }
@@ -626,7 +682,7 @@ export default function Home() {
       {notice && <div role="status" className="notice">{notice}</div>}{listingError && <div role="alert" className="notice">{listingError}</div>}
       {marketplace && !user && AuthForm()}
       {marketplace && user && <section className="account-section"><div className="account-heading"><div><span className="section-kicker">МОЯТ ПРОФИЛ</span><h2>Моите обяви</h2><p>{user.email}</p></div><button className="text-link" onClick={() => marketplace.auth.signOut()}>Изход</button></div>
-        {myListings.length ? <div className="account-list">{myListings.map((row) => <article className="account-row" key={row.id}><CarPhoto photo={0} imageUrl={row.imageUrl} /><div><strong>{row.make} {row.model}</strong><small>{row.year} · {euro(row.price_eur)} · {row.city}</small><span className={`status-pill status-${row.status}`}>{{ draft: "Чернова", pending: "Чака одобрение", active: "Публикувана", archived: "Свалена / архивирана" }[row.status]}</span>{row.status !== "archived" && <button className="remove-listing" type="button" disabled={busy} onClick={() => removeMyListing(row)}>{row.status === "active" ? "Свали обявата" : "Изтрий обявата"}</button>}</div></article>)}</div> : <p className="account-empty">Все още нямаш изпратени обяви.</p>}
+        {myListings.length ? <div className="account-list">{myListings.map((row) => <article className="account-row" key={row.id}><CarPhoto photo={0} imageUrl={row.imageUrl} /><div><strong>{row.make} {row.model}</strong><small>{row.year} · {euro(row.price_eur)} · {row.city}</small><span className={`status-pill status-${row.status}`}>{{ draft: "Чернова", pending: "Чака одобрение", active: "Публикувана", archived: "Свалена / архивирана" }[row.status]}</span>{row.status !== "archived" && <div className="listing-actions"><button className="edit-listing" type="button" disabled={busy} onClick={() => startEditingListing(row)}>Редактирай</button><button className="remove-listing" type="button" disabled={busy} onClick={() => removeMyListing(row)}>{row.status === "active" ? "Свали обявата" : "Изтрий обявата"}</button></div>}</div></article>)}</div> : <p className="account-empty">Все още нямаш изпратени обяви.</p>}
         <div className="inbox"><h3>Запитвания за моите обяви</h3>
           {inquiries.length ? <div className="inbox-list">{inquiries.map((item) => {
             const listing = myListings.find((row) => row.id === item.listing_id);
@@ -634,13 +690,13 @@ export default function Home() {
           })}</div> : <p className="account-empty">Все още няма запитвания.</p>}
         </div>
       </section>}
-      {(!marketplace || user) && <form className="post-form" onSubmit={marketplace ? saveLiveListing : saveDraft}><div className="form-grid">
+      {(!marketplace || user) && <form id="listing-editor" className="post-form listing-editor" onSubmit={marketplace ? saveLiveListing : saveDraft}><div className="editor-heading"><h2>{editingListing ? `Редактирай ${editingListing.make} ${editingListing.model}` : "Нова обява"}</h2>{editingListing && <button type="button" className="text-link" disabled={busy} onClick={() => { resetListingForm(); setListingError(""); setNotice(""); }}>Откажи редакцията</button>}</div>{editingListing && <p className="form-note">След запис обявата ще чака повторно одобрение. Дотогава няма да се вижда публично.</p>}<fieldset className="listing-fields" disabled={busy}><div className="form-grid">
       {([ ["make", "Марка", "Напр. Volkswagen"], ["model", "Модел", "Напр. Golf"], ["year", "Година", "Напр. 2020"], ["mileage", "Пробег (км)", "Напр. 85000"], ["price", "Цена (€)", "Напр. 15900"], ["city", "Град", "Напр. Бургас"] ] as const).map(([key, label, placeholder]) => <label key={key}>{label}<input required type={["year", "mileage", "price"].includes(key) ? "number" : "text"} min="0" placeholder={placeholder} value={draftForm[key]} onChange={(e) => setDraftForm({ ...draftForm, [key]: e.target.value })} /></label>)}
       {([ ["fuel", "Гориво", ["Бензин", "Дизел", "Хибрид", "Електрически"]], ["gearbox", "Скоростна кутия", ["Ръчна", "Автоматична"]], ["body", "Купе", categories] ] as const).map(([key, label, options]) => <label key={key}>{label}<select value={draftForm[key]} onChange={(e) => setDraftForm({ ...draftForm, [key]: e.target.value, ...(key === "fuel" ? { emissionClass: "", co2GKm: "" } : {}) })}>{options.map((option) => <option key={option}>{option}</option>)}</select></label>)}
       <label>Екологична категория<select disabled={draftForm.fuel === "Електрически"} value={draftForm.fuel === "Електрически" ? zeroEmissions : draftForm.emissionClass} onChange={(e) => setDraftForm({ ...draftForm, emissionClass: e.target.value })}><option value="">Не е посочена</option>{draftForm.fuel === "Електрически" && <option>{zeroEmissions}</option>}{emissionClasses.map((value) => <option key={value}>{value}</option>)}</select></label>
       <label>CO₂ емисии при движение (г/км)<input type="number" min="0" max="1000" step="1" disabled={draftForm.fuel === "Електрически"} value={draftForm.fuel === "Електрически" ? "0" : draftForm.co2GKm} onChange={(e) => setDraftForm({ ...draftForm, co2GKm: e.target.value })} placeholder="По документи, ако е известно" /></label>
       {marketplace && <label>Телефон за връзка (по желание)<input type="tel" inputMode="tel" autoComplete="tel" maxLength={24} placeholder="+359 87 123 4567" value={draftForm.contactPhone} onChange={(e) => setDraftForm({ ...draftForm, contactPhone: e.target.value })} /><small>Ако го попълниш, номерът ще се вижда публично в обявата след одобрение.</small></label>}
-    </div>{marketplace && <><label className="photo-input">Описание<textarea maxLength={5000} rows={5} placeholder="Състояние, оборудване, сервизна история…" value={draftForm.details} onChange={(event) => setDraftForm({ ...draftForm, details: event.target.value })} /></label><label className="photo-input">Снимки (до 8, по 5 MB)<input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={(event) => selectPhotos(event.target.files)} />{photos.length > 0 && <small>{photos.length} избрани</small>}</label></>}<button className="primary-button" type="submit" disabled={busy}><Icon name="plus" size={18} /> {marketplace ? busy ? "Изпращане…" : "Изпрати за преглед" : "Запази чернова"}</button><p className="form-note">{marketplace ? "Ще виждаш състоянието на обявата си в „Моите обяви“ над формата." : "Тази версия не публикува обяви онлайн. Снимките, профилите и публичното публикуване са следваща стъпка."}</p></form>}
+    </div>{marketplace && <><label className="photo-input">Описание<textarea maxLength={5000} rows={5} placeholder="Състояние, оборудване, сервизна история…" value={draftForm.details} onChange={(event) => setDraftForm({ ...draftForm, details: event.target.value })} /></label>{editingListing && <div className="existing-photos"><h3>Запазени снимки ({retainedPhotos.length})</h3>{retainedPhotos.length ? <div className="edit-photo-grid">{retainedPhotos.map((photo, index) => <div className="edit-photo" key={photo.path}>{photo.url ? <img src={photo.url} alt={`Снимка ${index + 1} на обявата`} /> : <span>Снимка {index + 1}</span>}<button type="button" disabled={busy} onClick={() => setRetainedPhotos((old) => old.filter((item) => item.path !== photo.path))} aria-label={`Премахни снимка ${index + 1}`}>Премахни</button></div>)}</div> : <p className="form-note">Няма запазени снимки. Можеш да добавиш нови по-долу.</p>}</div>}<label className="photo-input">{editingListing ? "Добави нови снимки (общо до 8, по 5 MB)" : "Снимки (до 8, по 5 MB)"}<input key={photoInputVersion} type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={(event) => selectPhotos(event.target.files)} />{photos.length > 0 && <small>{photos.length} нови снимки избрани</small>}</label></>}<button className="primary-button" type="submit" disabled={busy}><Icon name="plus" size={18} /> {marketplace ? busy ? "Записване…" : editingListing ? "Запази промените за преглед" : "Изпрати за преглед" : "Запази чернова"}</button><p className="form-note">{marketplace ? "Ще виждаш състоянието на обявата си в „Моите обяви“ над формата." : "Тази версия не публикува обяви онлайн. Снимките, профилите и публичното публикуване са следваща стъпка."}</p></fieldset></form>}
       {marketplace && user?.app_metadata?.role === "admin" && <section className="account-section"><div className="account-heading"><div><span className="section-kicker">АДМИНИСТРАЦИЯ</span><h2>Чакащи обяви</h2></div></div>
         {pendingListings.length ? <div className="account-list">{pendingListings.map((row) => <article className="account-row moderator-row" key={row.id}><PhotoGallery key={row.id} photo={0} imageUrls={row.imageUrls || []} className="moderator-gallery" /><div><strong>{row.make} {row.model}</strong><small>{row.year} · {number(row.mileage_km)} км · {euro(row.price_eur)} · {row.city}</small><small>Продавач: {row.seller_id}</small><p>{row.details || "Няма добавено описание."}</p><div className="moderator-actions"><button disabled={busy} onClick={() => moderateListing(row.id, "active")}>Одобри</button><button disabled={busy} onClick={() => moderateListing(row.id, "archived")}>Отхвърли</button></div></div></article>)}</div> : <p className="account-empty">Няма обяви за преглед.</p>}
       </section>}
