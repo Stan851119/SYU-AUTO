@@ -5,6 +5,7 @@ import type { User } from "@supabase/supabase-js";
 import { loadActiveListings, loadListingInquiries, loadMyListings, loadPendingListings, marketplace, type InquiryRow, type ListingRow } from "../lib/marketplace";
 import { estimateCar, type Exterior, type Valuation } from "../lib/valuation";
 import { cityCoordinates, distanceBetweenCitiesKm } from "../lib/locations";
+import { preparePhoto } from "../lib/prepare-photo";
 
 type Car = {
   id: number | string;
@@ -450,10 +451,19 @@ export default function Home() {
       }
       const paths: string[] = retainedPhotos.map((photo) => photo.path);
       for (const file of photos) {
-        const extension = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
-        const path = `${user.id}/${listingId}/${crypto.randomUUID()}.${extension}`;
-        const uploaded = await marketplace.storage.from("car-photos").upload(path, file, { contentType: file.type, upsert: false });
-        if (uploaded.error) throw uploaded.error;
+        const prepared = await preparePhoto(file);
+        const uploaded = await marketplace.functions.invoke("secure-car-photo", {
+          body: prepared, headers: { "Content-Type": "image/jpeg", "x-listing-id": listingId },
+        });
+        if (uploaded.error || typeof uploaded.data?.path !== "string") {
+          let message = "Не успяхме да проверим снимката. Опитай отново.";
+          if (uploaded.error && "context" in uploaded.error && uploaded.error.context instanceof Response) {
+            const detail = await uploaded.error.context.json().catch(() => null);
+            if (typeof detail?.error === "string") message = detail.error;
+          }
+          throw new Error(message);
+        }
+        const path = uploaded.data.path;
         paths.push(path); uploadedPaths.push(path);
       }
       let update = marketplace.from("car_listings").update({ ...fields, photo_paths: paths, status: "pending" })
