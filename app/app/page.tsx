@@ -166,6 +166,7 @@ export default function Home() {
   const [inquiryNotice, setInquiryNotice] = useState("");
   const [user, setUser] = useState<User | null>(null);
   const [email, setEmail] = useState("");
+  const [authMode, setAuthMode] = useState<"login" | "register">("login");
   const [photos, setPhotos] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
   const [listingError, setListingError] = useState("");
@@ -264,6 +265,15 @@ export default function Home() {
     setNotice("");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
+  function chooseAuthMode(mode: "login" | "register") {
+    setAuthMode(mode);
+    setNotice("");
+    setListingError("");
+  }
+  function openAuth(mode: "login" | "register") {
+    chooseAuthMode(mode);
+    navigate("post");
+  }
   function updateFilter(key: keyof Filters, value: string) {
     setFilters((old) => ({ ...old, [key]: value, ...(key === "make" ? { model: "" } : {}), ...(key === "originCity" && !value ? { radiusKm: "" } : {}) }));
     if (key === "originCity" && !value && sort === "distanceAsc") setSort("newest");
@@ -299,15 +309,43 @@ export default function Home() {
   function openCar(id: number | string) { setSelectedId(id); navigate("detail"); }
   async function sendSignIn(event: FormEvent) {
     event.preventDefault();
-    if (!marketplace) return;
+    if (!marketplace || busy) return;
     if (view === "detail" && selected && typeof selected.id === "string") {
       localStorage.setItem("mmc-return-listing", selected.id);
     }
-    setBusy(true); setListingError("");
-    const { error } = await marketplace.auth.signInWithOtp({ email: email.trim(),
-      options: { emailRedirectTo: window.location.origin } });
-    setBusy(false);
-    setNotice(error ? `Не успяхме да изпратим линк: ${error.message}` : "Изпратихме линк за вход на посочения имейл.");
+    setBusy(true); setListingError(""); setNotice("");
+    try {
+      const { error } = await marketplace.auth.signInWithOtp({ email: email.trim(),
+        options: { emailRedirectTo: window.location.origin, shouldCreateUser: authMode === "register" } });
+      if (error) {
+        setNotice(error.status === 429 || error.code === "over_email_send_rate_limit"
+          ? "Достигнат е лимитът за изпращане на имейли. Изчакай преди нов опит и провери вече получените писма."
+          : authMode === "login"
+            ? "Не успяхме да изпратим линк за вход. Провери имейла си. Ако нямаш профил, избери „Регистрация“."
+            : "Не успяхме да изпратим линк за регистрация. Опитай отново по-късно.");
+      } else {
+        setNotice(authMode === "register"
+          ? "Провери имейла си и отвори линка, за да потвърдиш регистрацията и да влезеш. Ако вече имаш профил, линкът ще те въведе в него."
+          : "Ако имаш профил с този имейл, ще получиш линк за вход. Провери и папката „Спам“.");
+      }
+    } catch {
+      setNotice("Не успяхме да се свържем. Провери интернет връзката и опитай отново.");
+    } finally { setBusy(false); }
+  }
+
+  function AuthForm({ inquiry = false }: { inquiry?: boolean } = {}) {
+    return <form className="post-form signin-form" onSubmit={sendSignIn}>
+      <div className="auth-modes" role="group" aria-label="Избери вход или регистрация">
+        <button type="button" aria-pressed={authMode === "login"} disabled={busy} onClick={() => chooseAuthMode("login")}>Вход</button>
+        <button type="button" aria-pressed={authMode === "register"} disabled={busy} onClick={() => chooseAuthMode("register")}>Регистрация</button>
+      </div>
+      <h2>{authMode === "login" ? "Вход в профила" : "Създай профил"}</h2>
+      <p>{authMode === "login" ? "Въведи имейла на съществуващия си профил. Ще получиш сигурен линк за вход, без парола." : "Въведи имейла си, за да създадеш нов профил. Потвърди го чрез линка, който ще получиш по имейл."}</p>
+      {inquiry && <p>След вход ще се върнеш към тази обява, за да изпратиш запитване.</p>}
+      <label>Имейл<input type="email" autoComplete="email" required disabled={busy} value={email} onChange={(event) => setEmail(event.target.value)} placeholder="name@example.com" /></label>
+      <button className="primary-button" type="submit" disabled={busy}>{busy ? "Изпращане…" : authMode === "login" ? "Изпрати линк за вход" : "Изпрати линк за регистрация"}</button>
+      {inquiry && notice && <p role="status">{notice}</p>}
+    </form>;
   }
 
   async function sendInquiry(event: FormEvent) {
@@ -519,7 +557,10 @@ export default function Home() {
           <button className={view === "valuation" ? "active" : ""} onClick={() => navigate("valuation")}>Оцени кола</button>
           <button className={view === "favorites" ? "active" : ""} onClick={() => navigate("favorites")}>Любими {favorites.length > 0 && <span className="nav-count">{favorites.length}</span>}</button>
           <button className={view === "compare" ? "active" : ""} onClick={() => navigate("compare")}>Сравни {comparedCars.length > 0 && <span className="nav-count">{comparedCars.length}</span>}</button>
-          <button className={view === "post" ? "active" : ""} onClick={() => navigate("post")}>{user ? "Моите обяви" : "Вход / Регистрация"}</button>
+          {user ? <button className={view === "post" ? "active" : ""} onClick={() => navigate("post")}>Моите обяви</button> : <>
+            <button className={view === "post" && authMode === "login" ? "active" : ""} onClick={() => openAuth("login")}>Вход</button>
+            <button className={view === "post" && authMode === "register" ? "active" : ""} onClick={() => openAuth("register")}>Регистрация</button>
+          </>}
           <a href="/contact">Контакти</a>
         </nav>
         <div className="header-actions">
@@ -560,7 +601,7 @@ export default function Home() {
     </main>}
 
     {view === "detail" && selected && <main className="page-width interior detail-page"><button className="back-link" onClick={() => navigate("results")}>← Обратно към обявите</button>{notice && <div className="notice">{notice}</div>}<div className="detail-layout"><div><PhotoGallery key={selected.id} photo={selected.photo} imageUrls={selected.imageUrls || (selected.imageUrl ? [selected.imageUrl] : [])} /><p className="photo-note">{selected.draft ? "Черновата използва илюстративна снимка." : marketplace ? selected.imageUrl ? "Снимка, качена от продавача." : "Все още няма добавена снимка." : "Демонстрационна обява · снимката е илюстративна."}</p></div><div className="detail-panel"><span className="section-kicker">{selected.draft ? "ЛОКАЛНА ЧЕРНОВА" : marketplace ? "ОБЯВА" : "ПРИМЕРНА ОБЯВА"}</span><h1>{selected.title}</h1><p className="detail-price">{euro(selected.price)}</p><p className="detail-city"><Icon name="pin" size={17} />{selected.city}</p>{marketplace && !selected.draft && (!user || user.id !== selected.sellerId) && <section className="seller-contact"><h2>Връзка с продавача</h2><SellerContactActions car={selected} />{!selected.contactPhone && <p>Продавачът не е посочил телефон. Изпрати му съобщение.</p>}</section>}<PriceGuide car={selected} catalog={cars} demo={!marketplace} /><div className="spec-grid"><span>Година<strong>{selected.year}</strong></span><span>Пробег<strong>{number(selected.mileage)} км</strong></span><span>Гориво<strong>{selected.fuel}</strong></span><span>Скоростна кутия<strong>{selected.gearbox}</strong></span><span>Купе<strong>{selected.body}</strong></span><span>Екологична категория<strong>{emissionClassOf(selected) || "Не е посочена"}</strong></span><span>CO₂<strong>{co2Of(selected) == null ? "Не е посочено" : `${co2Of(selected)} г/км`}</strong></span></div><button className="primary-button wide" onClick={() => toggleFavorite(selected.id)}><Icon name="heart" size={19} fill={favorites.includes(selected.id) ? "currentColor" : "none"} />{favorites.includes(selected.id) ? "Запазено в любими" : "Запази в любими"}</button><button className="compare-detail-button" onClick={() => toggleCompare(selected.id)} aria-pressed={compareIds.includes(selected.id)}>{compareIds.includes(selected.id) ? "✓ Добавена за сравнение" : "+ Добави за сравнение"}</button>{selected.details && <p className="detail-description">{selected.details}</p>}{marketplace && !selected.draft && <section id="seller-message" className="inquiry-panel"><h2>Съобщение до продавача</h2>
-        {!user ? <form onSubmit={sendSignIn}><p>Влез с имейл, за да изпратиш запитване. След вход ще се върнеш към тази обява.</p><label>Имейл<input type="email" required value={email} onChange={(event) => setEmail(event.target.value)} placeholder="name@example.com" /></label><button className="primary-button" disabled={busy}>{busy ? "Изпращане…" : "Изпрати линк за вход"}</button></form>
+        {!user ? AuthForm({ inquiry: true })
         : user.id === selected.sellerId ? <p>Това е твоята обява.</p>
         : sentInquiryIds.includes(String(selected.id)) ? <p>Вече си изпратил запитване за тази обява.</p>
         : <form onSubmit={sendInquiry}><label>Съобщение до продавача<textarea required minLength={10} maxLength={2000} rows={4} value={inquiryMessage} onChange={(event) => setInquiryMessage(event.target.value)} placeholder="Здравейте, автомобилът още ли е наличен?" /></label><p>Имейлът ти ({user.email}) ще бъде показан на продавача, за да може да ти отговори.</p><button className="primary-button" type="submit" disabled={busy}>{busy ? "Изпращане…" : "Изпрати запитване"}</button></form>}
@@ -583,7 +624,7 @@ export default function Home() {
 
     {view === "post" && <main className="page-width interior post-page"><div className="interior-heading"><span className="section-kicker">MMC AUTO</span><h1>{marketplace ? "Публикувай обява" : "Подготви обява"}</h1><p>{marketplace ? "Попълни данните и снимките. Обявата се публикува след преглед." : "Създай чернова на автомобила. Тя се пази само в този браузър и не е публична."}</p></div>
       {notice && <div role="status" className="notice">{notice}</div>}{listingError && <div role="alert" className="notice">{listingError}</div>}
-      {marketplace && !user && <form className="post-form signin-form" onSubmit={sendSignIn}><h2>Вход или регистрация</h2><p>Въведи имейла си. Ще получиш линк за вход; ако нямаш профил, той ще бъде създаден при първия вход.</p><label>Имейл<input type="email" required value={email} onChange={(event) => setEmail(event.target.value)} placeholder="name@example.com" /></label><button className="primary-button" disabled={busy}>Изпрати линк</button>{notice && <p role="status">{notice}</p>}</form>}
+      {marketplace && !user && AuthForm()}
       {marketplace && user && <section className="account-section"><div className="account-heading"><div><span className="section-kicker">МОЯТ ПРОФИЛ</span><h2>Моите обяви</h2><p>{user.email}</p></div><button className="text-link" onClick={() => marketplace.auth.signOut()}>Изход</button></div>
         {myListings.length ? <div className="account-list">{myListings.map((row) => <article className="account-row" key={row.id}><CarPhoto photo={0} imageUrl={row.imageUrl} /><div><strong>{row.make} {row.model}</strong><small>{row.year} · {euro(row.price_eur)} · {row.city}</small><span className={`status-pill status-${row.status}`}>{{ draft: "Чернова", pending: "Чака одобрение", active: "Публикувана", archived: "Свалена / архивирана" }[row.status]}</span>{row.status !== "archived" && <button className="remove-listing" type="button" disabled={busy} onClick={() => removeMyListing(row)}>{row.status === "active" ? "Свали обявата" : "Изтрий обявата"}</button>}</div></article>)}</div> : <p className="account-empty">Все още нямаш изпратени обяви.</p>}
         <div className="inbox"><h3>Запитвания за моите обяви</h3>
