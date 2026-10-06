@@ -266,3 +266,90 @@ button { cursor: pointer; }
 .edit-photo img { display: block; width: 100%; height: 100px; object-fit: cover; }
 .edit-photo span { display: grid; min-height: 100px; place-items: center; font-size: 13px; }
 .edit-photo button { width: 100%; padding: 9px; border: 0; background: #fff; color: #a9162a; font-size: 12px; font-weight: 700; }
+
+/* Sell and value landing page. */
+.valuation-page { padding-top: 32px; padding-bottom: 64px; }
+.sell-hero { display: grid; grid-template-columns: 1.1fr 1fr; align-items: center; gap: 35px; padding: 52px; overflow: hidden; border: 1px solid #eadfe0; border-radius: 24px; background: linear-gradient(120deg, #fff5f1, #faf8f7 55%, #e8edf0); }
+.sell-hero h1 { margin: 20px 0; font-size: clamp(42px, 4.7vw, 68px); letter-spacing: -.055em; line-height: 1.04; font-weight: 900; }
+.sell-hero h1 span { color: #e5192e; }
+.sell-hero-copy > p { color: #515b69; font-size: 18px; line-height: 1.6; margin: 0; }
+.sell-start { display: inline-flex; align-items: center; justify-content: center; gap: 24px; padding: 17px 24px; margin-top: 26px; font-size: 15px; border-radius: 9px; }
+.sell-benefits { display: flex; flex-wrap: wrap; gap: 12px 22px; margin-top: 24px; font-size: 12px; color: #515b69; }
+.sell-benefits span { display: flex; align-items: center; gap: 7px; }
+.sell-benefits svg { color: #e5192e; flex-shrink: 0; }
+.sell-hero-visual { min-width: 0; text-align: center; position: relative; }
+.sell-visual-label { color: #6a717d; font-size: 10px; letter-spacing: .13em; font-weight: 800; }
+.sell-car-orbit { display: grid; place-items: center; position: relative; margin: 12px auto 0; max-width: 410px; aspect-ratio: 1.4; }
+.sell-car-orbit:before { content: ''; position: absolute; width: 80%; aspect-ratio: 1; border: 1px solid #ffffffb8; border-radius: 50%; background: radial-gradient(circle, #ffffffdd, #ffffff38 70%); }
+.sell-car-orbit img { position: relative; z-index: 1; width: 100%; height: auto; filter: drop-shadow(0 22px 16px #17223525); }
+.sell-visual-card { position: relative; display: flex; align-items: center; gap: 14px; width: min(360px, 100%); margin: -5px auto 0; padding: 19px; border-radius: 14px; background: #fff; box-shadow: 0 14px 35px #202d3d10; text-align: left; }
+.sell-visual-icon { display: grid; place-items: center; width: 45px; height: 45px; border-radius: 11px; background: #fff0f1; color: #e5192e; flex-shrink: 0; }
+.sell-visual-card small { display: block; font-size: 9px; color: #737d8c; letter-spacing: .09em; margin-bottom: 6px; }
+.sell-visual-card strong { font-size: 13px; }
+.sell-visual-card > svg { color: #e5192e; margin-left: auto; flex-shrink: 0; }
+.sell-process { padding: 46px 0; }
+.sell-section-heading { margin-bottom: 24px; }
+.sell-section-heading h2 { margin: 10px 0; font-size: clamp(25px, 2.5vw, 34px); letter-spacing: -.035em; line-height: 1.2; }
+.sell-section-heading > p { color: #687383; line-height: 1.5; margin: 0; font-size: 14px; }
+.sell-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin: 0; padding: 0; list-style: none; }
+.sell-steps li { padding: 27px; background: #fff; border: 1px solid #e3e7ed; border-radius: 15px; position: relative; }
+.sell-step-number { position: absolute; right: 24px; top: 23px; font-size: 28px; font-weight: 900; letter-spacing: -.05em; color: #e3e7ed; }
+.sell-steps li > svg { color: #e5192e; }
+.sell-steps h3 { margin: 20px 0 9px; font-size: 18px; letter-spacing: -.02em; }
+.sell-steps p { margin: 0; max-width: 300px; color: #687383; font-size: 14px; line-height: 1.6; }
+.sell-details { padding-top: 20px; scroll-margin-top: 25px; }
+.sell-form-heading, .sell-result-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 10px; letter-spacing: .08em; font-weight: 800; margin-bottom: 25px; }
+.sell-form-heading { color: #687383; }
+.sell-form-heading svg { color: #e5192e; }
+.sell-details .valuation-layout { grid-template-columns: minmax(0, 1.2fr) minmax(300px, .8fr); gap: 24px; }
+.sell-details .valuation-form { border-radius: 16px; padding: 32px; }
+.sell-details .form-grid input, .sell-details .form-grid select, .sell-details .valuation-condition select { height: 50px; border-radius: 8px; }
+.sell-form-submit { display: flex; justify-content: center; align-items: center; gap: 15px; width: 100%; padding: 16px; margin-top: 24px; border-radius: 9px; }
+.sell-form-note { margin: 12px 0 0; text-align: center; font-size: 12px; color: #687383; }
+.sell-details .valuation-result { padding: 32px; border-radius: 16px; background: #101824; }
+.sell-result-heading { color: #aeb9c8; }
+.sell-result-heading svg { color: #f86778; }
+.sell-result-placeholder { width: 64px; height: 64px; display: grid; place-items: center; margin: 30px 0 22px; border-radius: 16px; background: #ffffff0c; color: #f86778; }
+.sell-details .valuation-result h2 { font-size: clamp(25px, 2.7vw, 34px); letter-spacing: -.035em; line-height: 1.2; }
+.sell-details .valuation-result p { font-size: 14px; }
+.sell-range { display: flex; gap: 5px; margin: 28px 0; }
+.sell-range span { height: 7px; border-radius: 5px; flex: 1; background: #485363; }
+.sell-range span:nth-child(2) { background: #e5192e; }
+.valuation-method { margin-top: 22px; padding: 18px 0; border-top: 1px solid #e3e7ed; color: #687383; font-size: 13px; line-height: 1.65; }
+.valuation-method summary { color: #394454; cursor: pointer; font-weight: 700; }
+.valuation-method p { max-width: 950px; }
+.sell-publish { display: flex; justify-content: space-between; align-items: center; gap: 25px; margin-top: 35px; padding: 35px; border-radius: 17px; background: #fff; border: 1px solid #e3e7ed; }
+.sell-publish h2 { font-size: 25px; letter-spacing: -.025em; margin: 10px 0; }
+.sell-publish p { color: #687383; font-size: 14px; line-height: 1.5; margin: 0; }
+.sell-publish .primary-button { display: flex; align-items: center; justify-content: center; gap: 12px; flex-shrink: 0; padding: 16px 22px; border-radius: 9px; }
+@media (max-width: 900px) {
+  .sell-hero { padding: 35px; gap: 20px; }
+  .sell-hero h1 { font-size: 46px; }
+  .sell-benefits { gap: 10px; }
+  .sell-visual-label { font-size: 8px; }
+  .sell-details .valuation-layout { grid-template-columns: 1fr; }
+  .sell-steps li { padding: 22px; }
+  .sell-steps h3 { font-size: 16px; }
+}
+@media (max-width: 600px) {
+  .valuation-page { padding-top: 18px; padding-bottom: 35px; }
+  .sell-hero { grid-template-columns: 1fr; padding: 28px 24px; border-radius: 18px; gap: 25px; }
+  .sell-hero h1 { font-size: clamp(37px, 10.5vw, 52px); margin: 16px 0; }
+  .sell-hero-copy > p { font-size: 16px; }
+  .sell-start { width: 100%; margin-top: 20px; }
+  .sell-benefits { font-size: 11px; margin-top: 18px; }
+  .sell-hero-visual { padding-top: 4px; }
+  .sell-car-orbit { max-width: 280px; margin-top: 8px; }
+  .sell-visual-card { padding: 14px; max-width: 300px; }
+  .sell-process { padding: 32px 0; }
+  .sell-steps { grid-template-columns: 1fr; gap: 12px; }
+  .sell-steps li { padding: 22px 24px; }
+  .sell-steps h3 { margin-top: 12px; font-size: 18px; }
+  .sell-steps p { max-width: none; font-size: 13px; }
+  .sell-details { padding-top: 0; }
+  .sell-details .valuation-form, .sell-details .valuation-result { padding: 24px; }
+  .sell-publish { flex-direction: column; align-items: stretch; padding: 26px; }
+  .sell-publish h2 { font-size: 23px; }
+  .sell-publish .primary-button { width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
