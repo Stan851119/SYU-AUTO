@@ -353,3 +353,17 @@ button { cursor: pointer; }
   .sell-publish .primary-button { width: 100%; }
 }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+.footer-social { border-top: 1px solid #ffffff16; margin-top: 30px; padding-top: 28px; text-align: center; }
+.footer-social h2 { margin: 0 0 8px; font-size: 20px; font-weight: 800; letter-spacing: -.02em; }
+.footer-social > p { margin: 0; color: #aeb3bd; font-size: 13px; }
+.footer-social-links { display: flex; justify-content: center; flex-wrap: wrap; gap: 26px; margin-top: 22px; }
+.footer-social-item { display: flex; flex-direction: column; align-items: center; gap: 9px; color: #aeb3bd; font-size: 11px; }
+.footer-social-icon { display: grid; place-items: center; width: 55px; height: 55px; border: 1px solid #ffffff30; border-radius: 50%; background: #ffffff05; color: #fff; text-decoration: none; transition: color .2s, background .2s, border-color .2s; }
+.footer-social-icon[href]:hover, .footer-social-icon[href]:focus-visible { color: #fff; background: #e5192e; border-color: #e5192e; outline: 2px solid #fff; outline-offset: 3px; }
+.footer-social-note { display: block; margin-top: 20px; color: #8e99aa; font-size: 11px; line-height: 1.5; }
+@media (max-width: 600px) {
+  .footer-social { margin-top: 25px; padding-top: 25px; }
+  .footer-social-links { gap: 19px; }
+  .footer-social-icon { width: 50px; height: 50px; }
+}
