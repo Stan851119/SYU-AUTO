@@ -1,11 +1,25 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
+import { readLimitedJson, RequestError } from "../../../lib/request-security";
 
 export const runtime = "nodejs";
 
 const calls = new Map<string, { count: number; resetAt: number }>();
 
 export async function POST(request: NextRequest) {
+  const origin = request.headers.get("origin");
+  if (origin && origin !== request.nextUrl.origin) {
+    return NextResponse.json({ error: "Непозволен източник на заявката." }, { status: 403 });
+  }
+  let payload: unknown;
+  try { payload = await readLimitedJson(request); }
+  catch (error) {
+    return NextResponse.json({ error: error instanceof RequestError ? error.message : "Невалидна заявка." },
+      { status: error instanceof RequestError ? error.status : 400 });
+  }
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return NextResponse.json({ error: "Невалидна заявка." }, { status: 400 });
+  }
   const apiKey = process.env.OPENAI_API_KEY;
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -17,13 +31,15 @@ export async function POST(request: NextRequest) {
   const { data: auth, error: authError } = await supabase.auth.getUser(bearer);
   if (authError || !auth.user) return NextResponse.json({ error: "Сесията е изтекла." }, { status: 401 });
 
-  let payload: unknown;
-  try { payload = await request.json(); } catch { return NextResponse.json({ error: "Невалидна заявка." }, { status: 400 }); }
   const body = payload as { message?: unknown; history?: unknown };
   const message = typeof body?.message === "string" ? body.message.trim() : "";
   if (!message || message.length > 500) return NextResponse.json({ error: "Напиши въпрос до 500 знака." }, { status: 400 });
 
   const now = Date.now();
+  for (const [id, entry] of calls) if (entry.resetAt <= now) calls.delete(id);
+  if (!calls.has(auth.user.id) && calls.size >= 10000) {
+    return NextResponse.json({ error: "Услугата е заета. Опитай по-късно." }, { status: 503 });
+  }
   const usage = calls.get(auth.user.id);
   const current = usage && usage.resetAt > now ? usage : { count: 0, resetAt: now + 3_600_000 };
   if (current.count >= 5) return NextResponse.json({ error: "Достигнат е лимитът от 5 въпроса за час." }, { status: 429 });
