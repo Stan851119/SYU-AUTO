@@ -1,0 +1,8 @@
+export default function Home() {
+  return (
+    <main className="container" style={{padding:"40px 0"}}>
+      <h1>SYU AUTO</h1>
+      <p>Автомобили в България.</p>
+    </main>
+  );
+}
