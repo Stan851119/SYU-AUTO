@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import type { User } from "@supabase/supabase-js";
-import { loadActiveListings, loadListingInquiries, loadMyListings, loadPendingListings, marketplace, type InquiryRow, type ListingRow } from "../lib/marketplace";
+import { loadActiveListing, loadActiveListings, loadListingInquiries, loadMyListings, loadPendingListings, marketplace, type InquiryRow, type ListingRow } from "../lib/marketplace";
 import { estimateCar, type Exterior, type Valuation } from "../lib/valuation";
 import { cityCoordinates, distanceBetweenCitiesKm } from "../lib/locations";
 import { validateListing } from "../lib/listing-validation";
@@ -178,6 +178,7 @@ export default function Home() {
   const [drafts, setDrafts] = useState<Car[]>([]);
   const [liveCars, setLiveCars] = useState<Car[]>([]);
   const [listingsLoading, setListingsLoading] = useState(!!marketplace);
+  const [linkedListing, setLinkedListing] = useState<{ id: string | number | null; car: Car | null; loading: boolean; error: string }>({ id: null, car: null, loading: false, error: "" });
   const [myListings, setMyListings] = useState<ListingRow[]>([]);
   const [pendingListings, setPendingListings] = useState<ListingRow[]>([]);
   const [inquiries, setInquiries] = useState<InquiryRow[]>([]);
@@ -270,7 +271,7 @@ export default function Home() {
         fuel: row.fuel, gearbox: row.gearbox, emissionClass: row.emission_class, co2GKm: row.co2_g_km, city: row.city, body: row.body,
         photo: 0, imageUrl: row.imageUrl, imageUrls: row.imageUrls, details: row.details, sellerId: row.seller_id, contactPhone: row.contact_phone })));
         const returnId = localStorage.getItem("mmc-return-listing");
-        if (returnId && !new URLSearchParams(window.location.search).has("listing") && rows.some((row) => row.id === returnId)) {
+        if (returnId && !new URLSearchParams(window.location.search).has("listing")) {
           localStorage.removeItem("mmc-return-listing");
           setSelectedId(returnId);
           setView("detail");
@@ -284,6 +285,25 @@ export default function Home() {
       .finally(() => { if (active) setListingsLoading(false); });
     return () => { active = false; subscription.subscription.unsubscribe(); };
   }, []);
+
+  useEffect(() => {
+    if (!marketplace || view !== "detail" || listingsLoading || liveCars.some((car) => car.id === selectedId)) return;
+    let active = true;
+    setLinkedListing({ id: selectedId, car: null, loading: true, error: "" });
+    loadActiveListing(String(selectedId)).then((row) => {
+      if (!active) return;
+      const car: Car | null = row ? { id: row.id, make: row.make, model: row.model,
+        title: `${row.make} ${row.model}`, year: row.year, mileage: row.mileage_km, price: row.price_eur,
+        fuel: row.fuel, gearbox: row.gearbox, emissionClass: row.emission_class, co2GKm: row.co2_g_km,
+        city: row.city, body: row.body, photo: 0, imageUrl: row.imageUrl, imageUrls: row.imageUrls,
+        details: row.details, sellerId: row.seller_id, contactPhone: row.contact_phone } : null;
+      if (car) setLiveCars((old) => old.some((item) => item.id === car.id) ? old : [...old, car]);
+      setLinkedListing({ id: selectedId, car, loading: false, error: "" });
+    }).catch(() => {
+      if (active) setLinkedListing({ id: selectedId, car: null, loading: false, error: "Не успяхме да заредим обявата. Провери връзката и презареди страницата." });
+    });
+    return () => { active = false; };
+  }, [view, selectedId, listingsLoading, liveCars]);
 
   const cars = useMemo(() => marketplace ? liveCars : [...drafts, ...demoCars], [liveCars, drafts]);
   const matches = useMemo(() => cars.filter((car) =>
@@ -305,7 +325,9 @@ export default function Home() {
     sort === "mileageAsc" ? a.mileage - b.mileage : sort === "yearDesc" ? b.year - a.year :
     sort === "distanceAsc" && filters.originCity ? (distanceBetweenCitiesKm(filters.originCity, a.city) ?? Infinity) - (distanceBetweenCitiesKm(filters.originCity, b.city) ?? Infinity) : 0), [cars, filters, sort]);
 
-  const selected = cars.find((car) => car.id === selectedId);
+  const selected = cars.find((car) => car.id === selectedId) || (linkedListing.id === selectedId ? linkedListing.car : null);
+  const detailLoading = !!marketplace && !selected && (listingsLoading || linkedListing.id !== selectedId || linkedListing.loading);
+  const detailError = linkedListing.id === selectedId ? linkedListing.error : "";
   const shownCars = view === "favorites" ? cars.filter((car) => favorites.includes(car.id)) : matches;
   const makes = [...new Set(cars.map((car) => car.make))].sort();
   const comparedCars = compareIds.map((id) => cars.find((car) => car.id === id)).filter((car): car is Car => !!car);
@@ -725,7 +747,7 @@ export default function Home() {
       {shownCars.length ? <div className="cards-grid results-grid">{shownCars.map((car) => <CarCard car={car} key={car.id} />)}</div> : <div className="empty-state"><Icon name={view === "favorites" ? "heart" : "search"} size={38} /><h2>{view === "favorites" ? "Още нямаш любими обяви" : "Няма съвпадения"}</h2><p>{view === "favorites" ? "Натисни сърцето на автомобил, който ти харесва." : "Промени някой от филтрите, за да видиш повече автомобили."}</p><button className="primary-button" onClick={() => { setFilters(initialFilters); navigate("results"); }}>Разгледай обявите</button></div>}
     </main>}
 
-    {view === "detail" && !selected && <main className="page-width interior"><div className="empty-state" role="status"><h1>{listingsLoading ? "Зареждаме обявата…" : listingError ? "Не успяхме да заредим обявата" : "Обявата не е налична"}</h1><p>{listingsLoading ? "Моля, изчакай." : listingError || "Възможно е да е свалена от продавача или адресът да е неточен."}</p><button className="primary-button" onClick={() => navigate("results")}>Към всички обяви</button></div></main>}
+    {view === "detail" && !selected && <main className="page-width interior"><div className="empty-state" role="status"><h1>{detailLoading ? "Зареждаме обявата…" : detailError ? "Не успяхме да заредим обявата" : "Обявата не е налична"}</h1><p>{detailLoading ? "Моля, изчакай." : detailError || "Възможно е да е свалена от продавача или адресът да е неточен."}</p><button className="primary-button" onClick={() => navigate("results")}>Към всички обяви</button></div></main>}
 
     {view === "detail" && selected && <main className="page-width interior detail-page"><button className="back-link" onClick={() => navigate("results")}>← Обратно към обявите</button>{notice && <div className="notice">{notice}</div>}<div className="detail-layout"><div><PhotoGallery key={selected.id} photo={selected.photo} imageUrls={selected.imageUrls || (selected.imageUrl ? [selected.imageUrl] : [])} /><p className="photo-note">{selected.draft ? "Черновата използва илюстративна снимка." : marketplace ? selected.imageUrl ? "Снимка, качена от продавача." : "Все още няма добавена снимка." : "Демонстрационна обява · снимката е илюстративна."}</p></div><div className="detail-panel"><span className="section-kicker">{selected.draft ? "ЛОКАЛНА ЧЕРНОВА" : marketplace ? "ОБЯВА" : "ПРИМЕРНА ОБЯВА"}</span><h1>{selected.title}</h1><p className="detail-price">{euro(selected.price)}</p><p className="detail-city"><Icon name="pin" size={17} />{selected.city}</p>{marketplace && !selected.draft && (!user || user.id !== selected.sellerId) && <section className="seller-contact"><h2>Връзка с продавача</h2><SellerContactActions car={selected} />{!selected.contactPhone && <p>Продавачът не е посочил телефон. Изпрати му съобщение.</p>}</section>}<PriceGuide car={selected} catalog={cars} demo={!marketplace} /><div className="spec-grid"><span>Година<strong>{selected.year}</strong></span><span>Пробег<strong>{number(selected.mileage)} км</strong></span><span>Гориво<strong>{selected.fuel}</strong></span><span>Скоростна кутия<strong>{selected.gearbox}</strong></span><span>Купе<strong>{selected.body}</strong></span><span>Екологична категория<strong>{emissionClassOf(selected) || "Не е посочена"}</strong></span><span>CO₂<strong>{co2Of(selected) == null ? "Не е посочено" : `${co2Of(selected)} г/км`}</strong></span></div><button className="primary-button wide" onClick={() => toggleFavorite(selected.id)}><Icon name="heart" size={19} fill={favorites.includes(selected.id) ? "currentColor" : "none"} />{favorites.includes(selected.id) ? "Запазено в любими" : "Запази в любими"}</button><button className="compare-detail-button" onClick={async () => {
       try {
