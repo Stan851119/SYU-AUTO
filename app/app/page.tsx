@@ -63,7 +63,7 @@ const exteriorLabels: Record<Exterior, string> = { excellent: "Без забел
 
 const socialProfiles: { name: string; icon: string; href?: string }[] = [
   { name: "Instagram", icon: "instagram" },
-  { name: "TikTok", icon: "tiktok" },
+  { name: "TikTok", icon: "tiktok", href: "https://www.tiktok.com/@mmcauto1" },
   { name: "Facebook", icon: "facebook", href: "https://www.facebook.com/share/1YHe2YxqSo/?mibextid=wwXIfr" },
   { name: "YouTube", icon: "youtube" },
 ];
