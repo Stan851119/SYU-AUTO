@@ -47,11 +47,11 @@ export async function loadListingInquiries(listingIds: string[]) {
   return (data || []) as InquiryRow[];
 }
 
-async function withImages(rows: ListingRow[]) {
-  if (!marketplace) return rows;
+async function withImages(rows: ListingRow[], client = marketplace) {
+  if (!client) return rows;
   return Promise.all(rows.map(async (row) => {
     const signed = await Promise.all(row.photo_paths.map(async (path) => {
-      const { data } = await marketplace.storage.from("car-photos").createSignedUrl(path, 3600);
+      const { data } = await client.storage.from("car-photos").createSignedUrl(path, 3600);
       return data?.signedUrl;
     }));
     const imageUrls = signed.filter((url): url is string => !!url);
@@ -66,6 +66,18 @@ export async function loadActiveListings() {
     .eq("status", "active").order("created_at", { ascending: false }).limit(60);
   if (error) throw error;
   return withImages((data || []) as ListingRow[]);
+}
+
+// Resolve public links independently of the recent-listing feed. Never expose drafts.
+export async function loadActiveListing(id: string, client = marketplace): Promise<ListingRow | null> {
+  if (!client || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) return null;
+  const { data, error } = await client.from("car_listings")
+    .select("id,seller_id,make,model,year,mileage_km,price_eur,fuel,gearbox,emission_class,co2_g_km,body,city,contact_phone,details,photo_paths,status,updated_at")
+    .eq("id", id).eq("status", "active").maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  const [row] = await withImages([data as ListingRow], client);
+  return row;
 }
 
 export async function loadMyListings(sellerId: string) {
