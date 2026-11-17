@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Analytics } from "@vercel/analytics/next";
+import PrivacyControls from "./components/privacy-controls";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -18,5 +18,5 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({children}:{children:React.ReactNode}) {
-  return <html lang="bg"><body>{children}<Analytics /></body></html>;
+  return <html lang="bg"><body>{children}<PrivacyControls /></body></html>;
 }
